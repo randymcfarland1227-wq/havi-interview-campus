@@ -230,3 +230,20 @@ code{background:var(--t-text);color:var(--code-ink);font-weight:500}
 
 .plan .coretable td:last-child{color:var(--ink);font-weight:600;min-width:150px}
 .plan .link{font-size:inherit}
+
+/* dark-mode fixes and the theme switch */
+:root{--tip-bg:#fff7d6;--tip-ink:#1f1f1f;--tip-label:#8a6100;--tip-line:#d19a00}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--tip-bg:#3a2f0b;--tip-ink:#fff6cf;--tip-label:#fdd663;--tip-line:#fdd663}}
+:root[data-theme="dark"]{--tip-bg:#3a2f0b;--tip-ink:#fff6cf;--tip-label:#fdd663;--tip-line:#fdd663}
+.tip{background:var(--tip-bg);color:var(--tip-ink);border-left-color:var(--tip-line)}
+.tip span{color:var(--tip-label)}
+.chapnum,.chapter .eyebrow{color:#ffe98a}
+.chapter .btn{background:#ffe98a;color:#1f1f1f}
+.step strong,.core td strong,.plan strong{color:var(--hl-ink)}
+:root{--hl-ink:inherit}
+.navbtn[data-act="theme"]{border:1px solid var(--line)}
+@media (max-width:520px){.top{gap:6px;padding:8px 12px}.brand{font-size:14px}.navbtn{padding:6px 7px;font-size:13px}.meter{display:none}.top .brand{margin-right:auto}}
+:root{--chap-text:#1e3a8a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--chap-text:#a9c1ff}}
+:root[data-theme="dark"]{--chap-text:#a9c1ff}
+.core h2,.home h2,.lesson>.lhead>h1,.lesson .step>h3{color:var(--chap-text)}

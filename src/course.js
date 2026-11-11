@@ -18,6 +18,7 @@ const COURSE = {
     ['Forecasting, replenishment and inventory concepts; promotional planning', 'Chapter 7', ['kpi']],
     ['Pull data into Excel for analysis; ad-hoc extractions and reports', 'Chapter 7 (hand-off), chapters 8 and 9', ['kpi', 'xl-lookup', 'xl-summary']],
     ['Advanced Excel', 'Chapters 8 and 9', ['xl-lookup', 'xl-summary']],
+    ['Preferred: experience supporting planning systems such as Kinaxis', 'Chapter 11 (primer)', ['kinaxis']],
     ['Turn data into recommendations; communicate resolutions to stakeholders', 'Chapter 6 (report a finding), mock interview talk track', ['trace']]
   ],
   ladder: [
@@ -32,13 +33,13 @@ const COURSE = {
   lessons: [
     /* ------------------------------------------------------------------ 1 */
     {
-      id: 'read', title: 'Read a table before you query it', mins: 10, priority: 'Must',
-      builds: 'Starts from what you already do in Excel and Alteryx.',
-      outcome: 'Say what one row means in any table, name its key, and predict whether a count will be right.',
-      core: [["Table, row, column", "A table holds one kind of record. A row is one record. A column is one attribute.", "Look at real rows before you query. Interviewers notice."], ["Grain", "What one row represents.", "A count or sum taken at the wrong grain is the most common wrong answer."], ["Primary key", "The column (or columns) that is different on every row.", "It is what you join on and what you check for duplicates."], ["Foreign key", "A column that points at another table's key.", "It tells you which tables can be joined, and on what."], ["Header and detail", "orders has one row per order. order_lines has many rows per order.", "Joining them repeats the header once per line."], ["Run order", "FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY", "Explains why WHERE cannot use a total or a SELECT alias."]],
-      tip: "Before you write anything, say: \"one row in this table is …\". It is the quickest way to show you understand the data.",
+      id: 'read', title: 'SQL basics: tables, keys and how a statement is written', mins: 30, priority: 'Must',
+      builds: 'Start here. No SQL assumed, only what you already do in Excel and Alteryx.',
+      outcome: 'Name the parts of a table and of a statement, write a correct SELECT from scratch, and read an error message.',
+      core: [["Database, table", "A database is a set of tables. A table holds one kind of thing: orders, products.", "Like a workbook and its sheets, except every table has fixed columns."], ["Row, column", "A row is one record. A column is one attribute of it, with a fixed name and data type.", "You SELECT columns and filter rows. Mixing the two up is the first beginner error."], ["Data type", "What a column can hold: whole number, decimal, text, date, true/false.", "Decides how you write a value: 'text' and '2026-11-04' in single quotes, numbers bare."], ["Primary key", "The column (or columns) that is different on every row.", "Identifies a row. It is what other tables point at and what you check for duplicates."], ["Foreign key", "A column that holds another table's primary key.", "Tells you which tables join, and on what."], ["Grain", "What one row represents.", "A count or sum at the wrong grain is the most common wrong answer."], ["Statement, clause", "A statement is one complete instruction ending in ;. A clause is one part of it: SELECT, FROM, WHERE.", "Clauses must appear in a fixed order."], ["Keyword, identifier, literal", "Keyword = SQL's own word (SELECT). Identifier = a table or column name. Literal = a value you type ('Frozen', 50).", "Explains most syntax errors: a literal without quotes is read as a column name."], ["Alias (AS)", "A temporary name for a column or table, for this statement only.", "Makes output readable and joins shorter. A missing comma creates one by accident."], ["NULL", "No value recorded. Not zero, not blank text.", "Needs IS NULL, and turns any calculation into NULL."], ["Run order", "FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY", "Explains why WHERE cannot use a total or a SELECT alias."]],
+      tip: "Before you write anything, say: \"one row in this table is …, and its key is …\". Then write FROM first. It shows you understand the data before the syntax.",
       steps: [
-        { t: 'text', h: 'The case you will solve', key: "One wrong number on a screen, traced back to its cause. Each lesson adds one tool.", html: `
+        { t: 'text', h: 'The case you will solve', key: "One wrong number on a screen, traced back to its cause. Each chapter adds one tool.", html: `
 <p>A store calls: <strong>the order screen shows the wrong quantity.</strong> The screen reads from a copy of the data, the copy is fed by a sync job, and the sync job reads the order tables. The mistake could have entered at any of those points. Your job is to find where, with queries, and explain it.</p>
 <p>Every lesson adds one tool to that investigation. Lesson 6 runs the whole trace. The same nine small tables are used throughout, so you never have to learn new data. Tap <strong>Tables</strong> at any time to look at them.</p>` },
         { t: 'text', h: 'SQL is the Excel you already know, written as sentences', key: "Every clause has an Excel equivalent you already use.", html: `
@@ -53,8 +54,40 @@ const COURSE = {
 <tr><td>IF / IFS</td><td><code>CASE WHEN</code></td><td>Label or calculate by condition</td></tr>
 <tr><td>Append two sheets</td><td><code>UNION ALL</code></td><td>Stack rows from two queries</td></tr>
 </tbody></table></div>` },
+        { t: 'text', h: 'What a database is made of', key: "A table is a sheet with rules: fixed columns, one kind of record, one row per record.", html: `
+<div class="tablewrap"><table><thead><tr><th>Term</th><th>What it is</th><th>In the practice data</th><th>Excel word</th></tr></thead><tbody>
+<tr><td><strong>Database</strong></td><td>A collection of related tables</td><td>All nine tables</td><td>Workbook</td></tr>
+<tr><td><strong>Table</strong></td><td>One kind of thing, stored in rows and columns</td><td><code>products</code>, <code>orders</code>, <code>order_lines</code></td><td>Sheet</td></tr>
+<tr><td><strong>Column</strong> (field)</td><td>One attribute, with a name and a data type</td><td><code>product_name</code>, <code>unit_cost</code></td><td>Column with a header</td></tr>
+<tr><td><strong>Row</strong> (record)</td><td>One item in the table</td><td>The row for P01, Burger buns</td><td>Row</td></tr>
+<tr><td><strong>Value</strong></td><td>What sits where a row meets a column</td><td><code>0.35</code> in P01's unit_cost</td><td>Cell</td></tr>
+<tr><td><strong>NULL</strong></td><td>No value recorded</td><td>qty_shipped on a line that has not shipped</td><td>Empty cell (but Excel treats it as 0)</td></tr>
+</tbody></table></div>
+<p>Two differences from a spreadsheet matter. Rows have <strong>no fixed order</strong>: you get them sorted only if you ask with ORDER BY. And you never point at a cell like B7: you describe the rows you want and the database finds them.</p>` },
+        { t: 'text', h: 'Data types, and how to write a value of each', key: "Text and dates go in single quotes. Numbers do not.", html: `
+<div class="tablewrap"><table><thead><tr><th>Type (SQL Server name)</th><th>Holds</th><th>Write a value like</th><th>Example column</th></tr></thead><tbody>
+<tr><td><strong>INT</strong></td><td>Whole numbers</td><td><code>50</code></td><td>qty_ordered</td></tr>
+<tr><td><strong>DECIMAL(10,2)</strong>, FLOAT</td><td>Numbers with decimals</td><td><code>0.35</code></td><td>unit_cost</td></tr>
+<tr><td><strong>VARCHAR(50)</strong>, NVARCHAR</td><td>Text</td><td><code>'Frozen'</code></td><td>category, product_id</td></tr>
+<tr><td><strong>DATE</strong>, DATETIME</td><td>A date, or a date and time</td><td><code>'2026-11-04'</code></td><td>order_date, synced_at</td></tr>
+<tr><td><strong>BIT</strong></td><td>True or false, stored as 1 or 0</td><td><code>1</code></td><td>promo</td></tr>
+</tbody></table></div>
+<p>The type decides what works. You can add two INTs, you cannot add two VARCHARs. A number stored as text sorts as text ("100" before "20") and will not sum. An ID such as <code>'P01'</code> is text even when it looks numeric, so it needs quotes.</p>` },
         { t: 'run', h: 'Look at real rows first', key: "First move with any table: look at five rows.", sql: `SELECT TOP 5 *\nFROM order_lines;`,
           note: `<code>*</code> means every column. <code>TOP 5</code> means stop after five rows. Do this before anything else with an unfamiliar table: you are reading the data, not answering a question yet.` },
+        { t: 'text', h: 'Keys: how tables point at each other', key: "A primary key identifies a row. A foreign key is another table's primary key, stored here so the two can be joined.", html: `
+<div class="tablewrap"><table><thead><tr><th>Table</th><th>Primary key</th><th>Foreign keys (and what they point at)</th></tr></thead><tbody>
+<tr><td><code>products</code></td><td><strong>product_id</strong></td><td>none</td></tr>
+<tr><td><code>locations</code></td><td><strong>location_id</strong></td><td>none</td></tr>
+<tr><td><code>orders</code></td><td><strong>order_id</strong></td><td>location_id → locations</td></tr>
+<tr><td><code>order_lines</code></td><td><strong>line_id</strong></td><td>order_id → orders · product_id → products</td></tr>
+<tr><td><code>daily_plan</code></td><td><strong>plan_id</strong></td><td>location_id → locations · product_id → products</td></tr>
+<tr><td><code>inventory</code></td><td><strong>snapshot_date + location_id + product_id</strong></td><td>location_id → locations · product_id → products</td></tr>
+</tbody></table></div>
+<ul><li>A primary key is <strong>unique</strong> and never NULL. Two rows cannot share it.</li>
+<li>A key made of several columns, like the one on inventory, is a <strong>composite key</strong>. You need all of its columns to identify one row.</li>
+<li>A foreign key <em>should</em> always match a row in the table it points at. When it does not, you have an <strong>orphan</strong>, and finding those is a large part of this job (chapters 4 and 6).</li>
+<li>The table with the primary key is the "one" side; the table holding the foreign key is the "many" side. One order, many order lines.</li></ul>` },
         { t: 'text', h: 'Grain and key: the two facts that prevent wrong numbers', key: "Grain = what one row means. Key = what makes each row unique.", html: `
 <p><strong>Grain</strong> is what one row represents. <strong>Key</strong> is the column, or set of columns, that is different on every row.</p>
 <ul><li><code>orders</code>: one row per order. Key: <code>order_id</code>.</li>
@@ -67,6 +100,52 @@ const COURSE = {
           b: { label: 'order_lines (detail)', sql: `SELECT order_id, product_id, qty_ordered\nFROM order_lines\nWHERE order_id = 'O1001';` },
           diff: 'One order is one row in orders and two rows in order_lines.',
           use: ['Count orders, read status or dates → orders', 'Sum quantities, list products → order_lines'] },
+        { t: 'text', h: 'Anatomy of a statement', key: "Every query is the same sentence: SELECT what, FROM where, WHERE which rows, ORDER BY how sorted.", html: `
+<pre class="code">SELECT product_name, unit_cost AS cost
+FROM products
+WHERE category = 'Frozen'
+ORDER BY unit_cost DESC;</pre>
+<div class="tablewrap"><table><thead><tr><th>Piece</th><th>What it is</th><th>Rule</th></tr></thead><tbody>
+<tr><td><code>SELECT</code> <code>FROM</code> <code>WHERE</code> <code>ORDER BY</code></td><td><strong>Keywords</strong>: SQL's own words. Each starts a <strong>clause</strong>.</td><td>Fixed order. Capitals are a convention, not required.</td></tr>
+<tr><td><code>product_name</code>, <code>unit_cost</code>, <code>category</code></td><td><strong>Column names</strong> (identifiers)</td><td>No quotes. Separated by commas in SELECT.</td></tr>
+<tr><td><code>products</code></td><td><strong>Table name</strong> (identifier)</td><td>No quotes.</td></tr>
+<tr><td><code>AS cost</code></td><td><strong>Alias</strong>: a new name for the output column</td><td>Exists only in this statement. AS is optional.</td></tr>
+<tr><td><code>=</code></td><td><strong>Operator</strong>: compares two things</td><td>One equals sign.</td></tr>
+<tr><td><code>'Frozen'</code></td><td><strong>Literal</strong>: a value you typed</td><td>Text and dates in single quotes.</td></tr>
+<tr><td><code>DESC</code></td><td>Sort direction</td><td>High to low. ASC, the default, is low to high.</td></tr>
+<tr><td><code>;</code></td><td>End of the statement</td><td>One statement, one semicolon.</td></tr>
+</tbody></table></div>` },
+        { t: 'run', h: 'That statement, run', key: "Read the result against the statement, clause by clause.", sql: `SELECT product_name, unit_cost AS cost\nFROM products\nWHERE category = 'Frozen'\nORDER BY unit_cost DESC;`,
+          note: `Two columns because SELECT named two. The second is headed <code>cost</code> because of the alias. Two rows because only two products are Frozen. Highest cost first because of DESC.` },
+        { t: 'text', h: 'The syntax rules behind most errors', key: "Commas between items, quotes around text, clauses in order.", html: `
+<div class="tablewrap"><table><thead><tr><th>Rule</th><th>Right</th><th>Wrong</th></tr></thead><tbody>
+<tr><td>Comma between columns, none after the last</td><td><code>SELECT a, b FROM t</code></td><td><code>SELECT a b, FROM t</code></td></tr>
+<tr><td>Text and dates in single quotes</td><td><code>status = 'Open'</code></td><td><code>status = Open</code> · <code>status = "Open"</code></td></tr>
+<tr><td>Numbers without quotes</td><td><code>qty_ordered &gt; 50</code></td><td><code>qty_ordered &gt; '50'</code></td></tr>
+<tr><td>Clauses in the fixed order</td><td><code>… WHERE … ORDER BY …</code></td><td><code>… ORDER BY … WHERE …</code></td></tr>
+<tr><td>ORDER BY and GROUP BY are two words</td><td><code>ORDER BY order_date</code></td><td><code>ORDER order_date</code></td></tr>
+<tr><td>Names with spaces need square brackets</td><td><code>[Order Date]</code></td><td><code>Order Date</code></td></tr>
+<tr><td>Missing values use IS</td><td><code>qty_shipped IS NULL</code></td><td><code>qty_shipped = NULL</code></td></tr>
+</tbody></table></div>
+<p>Things that do <strong>not</strong> matter: capitals in keywords, line breaks, and extra spaces. <code>select * from orders</code> on one line is the same statement. Comments start with <code>--</code> and are ignored.</p>` },
+        { t: 'compare', h: 'A missing comma is not an error. It is an alias.',
+          intro: 'Request: product_id and product_name for every product.',
+          a: { label: 'Comma left out', sql: `SELECT product_id product_name\nFROM products;` },
+          b: { label: 'Comma in place', sql: `SELECT product_id, product_name\nFROM products;` },
+          diff: 'Without the comma, SQL reads product_name as a new name for product_id. You get one column of IDs under the wrong heading, and no error. Count the columns in your result against what was asked.',
+          use: ['One comma between every pair of columns in SELECT', 'No comma after the last column, before FROM', 'A result with fewer columns than expected → look for a missing comma'] },
+        { t: 'compare', h: 'Text without quotes is read as a column name',
+          intro: 'Request: the Frozen products.',
+          a: { label: 'No quotes', fails: true, sql: `SELECT product_id, product_name\nFROM products\nWHERE category = Frozen;` },
+          b: { label: 'Single quotes', sql: `SELECT product_id, product_name\nFROM products\nWHERE category = 'Frozen';` },
+          diff: "Without quotes, Frozen is an identifier, so the database looks for a column called Frozen and fails. SQL Server's wording is: Invalid column name 'Frozen'. That message nearly always means missing quotes or a misspelt column.",
+          use: ["Text value → 'single quotes'", 'Column or table name → no quotes', 'Double quotes mean a column name in SQL Server, not text'] },
+        { t: 'text', h: 'Write a statement in this order, not top to bottom', key: "FROM first, SELECT last. Run it after each step.", html: `
+<ol><li><strong>FROM</strong>: which table has the rows I need? Write <code>SELECT * FROM that_table;</code> and run it.</li>
+<li><strong>WHERE</strong>: which rows? Add one condition, run, check the row count went down the way you expected.</li>
+<li><strong>SELECT</strong>: which columns? Replace the <code>*</code> with the names asked for, in the order asked for.</li>
+<li><strong>ORDER BY</strong>: how sorted? Add it last.</li></ol>
+<p>This is the order the database works in, so each step gives you something you can check. In an interview it also gives you something to say at every step.</p>` },
         { t: 'text', h: 'You write clauses in one order. The database runs them in another.', key: "The database starts at FROM and reaches SELECT near the end.", html: `
 <div class="tablewrap"><table><thead><tr><th>You write</th><th>The database runs</th><th>Why it matters</th></tr></thead><tbody>
 <tr><td><code>SELECT</code></td><td><strong>1. FROM / JOIN</strong></td><td>Gathers the tables and pairs their rows first.</td></tr>
@@ -78,6 +157,47 @@ const COURSE = {
 <tr><td><code>ORDER BY</code></td><td><strong>7. TOP</strong></td><td>Cuts to the first N rows after sorting.</td></tr>
 </tbody></table></div>
 <div class="tip"><span>Interview tip</span>Because WHERE runs before SELECT, you cannot use a name created with AS in your WHERE clause. Repeat the expression instead.</div>` },
+        { t: 'text', h: 'Reading an error message', key: "The message names the problem and usually the exact word. Read it before changing anything.", html: `
+<div class="tablewrap"><table><thead><tr><th>SQL Server says</th><th>Usual cause</th><th>Fix</th></tr></thead><tbody>
+<tr><td><strong>Invalid column name 'x'</strong></td><td>Misspelt column, text without quotes, or an alias used in WHERE</td><td>Check the spelling in Tables; add quotes; repeat the expression</td></tr>
+<tr><td><strong>Invalid object name 'x'</strong></td><td>Misspelt or wrong table name</td><td>Check the table name</td></tr>
+<tr><td><strong>Incorrect syntax near 'x'</strong></td><td>Something just before x is missing or extra: a comma, a keyword, a bracket</td><td>Look at the word <em>before</em> the one named</td></tr>
+<tr><td><strong>Ambiguous column name 'x'</strong></td><td>Two joined tables both have x</td><td>Prefix it: <code>o.order_id</code></td></tr>
+<tr><td><strong>… is invalid in the select list because it is not contained in either an aggregate function or the GROUP BY clause</strong></td><td>A SELECT column that is neither grouped nor aggregated</td><td>Add it to GROUP BY or wrap it in SUM, MAX …</td></tr>
+<tr><td><strong>Conversion failed when converting …</strong></td><td>Comparing or adding text with a number or date</td><td>Fix the quotes, or CAST one side</td></tr>
+<tr><td><strong>Divide by zero error encountered</strong></td><td>A divisor of 0</td><td><code>NULLIF(divisor, 0)</code></td></tr>
+</tbody></table></div>
+<p>This practice database words its errors differently ("no such column"), but the causes are the same.</p>` },
+        { t: 'text', h: 'The other statement types, so you recognise them', key: "The interview is about SELECT. Know that the other four exist and what they do.", html: `
+<div class="tablewrap"><table><thead><tr><th>Statement</th><th>What it does</th><th>Example</th></tr></thead><tbody>
+<tr><td><strong>SELECT</strong></td><td>Reads rows. Changes nothing.</td><td><code>SELECT * FROM orders;</code></td></tr>
+<tr><td><strong>INSERT</strong></td><td>Adds rows</td><td><code>INSERT INTO locations VALUES ('L05','Miami DC','South');</code></td></tr>
+<tr><td><strong>UPDATE</strong></td><td>Changes values in existing rows</td><td><code>UPDATE orders SET status = 'Shipped' WHERE order_id = 'O1003';</code></td></tr>
+<tr><td><strong>DELETE</strong></td><td>Removes rows</td><td><code>DELETE FROM order_lines WHERE line_id = 4;</code></td></tr>
+<tr><td><strong>CREATE / ALTER</strong></td><td>Defines or changes a table's structure</td><td><code>CREATE TABLE …</code></td></tr>
+</tbody></table></div>
+<p>An UPDATE or DELETE with no WHERE changes <strong>every row</strong>. The safe habit, worth saying in an interview: run a SELECT with the same WHERE first, check the rows, then change them. This practice database is read-only, so only SELECT runs here.</p>` },
+        { t: 'try', id: 'basics-first', title: 'Your first statement',
+          prompt: 'Return product_name and category for every product, sorted by product_name.',
+          starter: `SELECT \nFROM \nORDER BY ;`,
+          solution: `SELECT product_name, category\nFROM products\nORDER BY product_name;`, ordered: true,
+          hints: ['The table is products.', 'Two columns, separated by a comma.', 'ORDER BY product_name'],
+          explain: 'No WHERE, so all six rows come back. Two columns in the order asked for.' },
+        { t: 'try', id: 'basics-alias', title: 'Filter, rename, sort',
+          prompt: 'Return product_id and unit_cost (renamed cost) for products whose lead_time_days is greater than 2. Sort by product_id.',
+          starter: `SELECT product_id, unit_cost AS \nFROM products\nWHERE `,
+          solution: `SELECT product_id, unit_cost AS cost\nFROM products\nWHERE lead_time_days > 2\nORDER BY product_id;`, ordered: true,
+          hints: ['AS cost renames the column.', 'lead_time_days is a number: no quotes around 2.', 'You can filter on a column you do not show.'],
+          explain: 'WHERE can test a column that is not in SELECT. The filter runs before the columns are chosen.' },
+        { t: 'try', id: 'basics-fix', title: 'Fix the syntax',
+          prompt: 'This statement should return location_id, location_name and region for locations in the South region, sorted by location_name. It has three syntax mistakes. Fix them.',
+          starter: `SELECT location_id location_name region\nFROM locations\nWHERE region = "South"\nORDER location_name;`,
+          solution: `SELECT location_id, location_name, region\nFROM locations\nWHERE region = 'South'\nORDER BY location_name;`, ordered: true,
+          hints: ['Count the commas in SELECT.', 'Text needs single quotes.', 'ORDER BY is two words.'],
+          explain: 'Two missing commas, double quotes around text, and ORDER without BY. The checker here tolerates the double quotes; SQL Server would not.' },
+        { t: 'quiz', q: 'In order_lines, which column is a foreign key?',
+          options: ['line_id', 'product_id', 'qty_ordered'], correct: 1,
+          why: 'product_id holds the primary key of products, so it is a foreign key (order_id is another). line_id is the primary key of order_lines itself.' },
         { t: 'quiz', q: 'You need the number of orders placed at L01. Which table do you count rows in?',
           options: ['order_lines, because it has the quantities', 'orders, because one row is one order', 'screen_orders, because that is what the store sees'], correct: 1,
           why: 'orders has one row per order. order_lines would count products, and screen_orders is a copy that may be incomplete.' }
@@ -691,6 +811,39 @@ J1:  =SUM(H2:H25) / SUM(F2:F25)      format as a percentage</pre>
           solution: `WITH ranked AS (\n  SELECT order_id, product_id, qty_ordered,\n         ROW_NUMBER() OVER (\n           PARTITION BY order_id\n           ORDER BY qty_ordered DESC, line_id\n         ) AS rn\n  FROM order_lines\n)\nSELECT order_id, product_id, qty_ordered\nFROM ranked\nWHERE rn = 1\nORDER BY order_id;`, ordered: true,
           hints: ['PARTITION BY order_id', 'ORDER BY qty_ordered DESC, line_id', 'WHERE rn = 1'],
           explain: 'The second ORDER BY column breaks ties, so the answer is the same every time it runs.' }
+      ]
+    }
+,
+    /* ------------------------------------------------------------------ 11 */
+    {
+      id: 'kinaxis', title: 'Kinaxis Maestro: what to know', mins: 10, priority: 'Know', track: 'Kinaxis',
+      builds: 'You are not expected to operate it tomorrow. You are expected to know what it is and to connect it to what you can already do.',
+      outcome: 'Describe Kinaxis Maestro in two sentences, use its vocabulary correctly, and map each term to a SQL or Excel skill you have.',
+      core: [["Kinaxis Maestro", "A cloud supply chain planning platform. Formerly called RapidResponse.", "It is the planning system this role supports. Use the current name, and know the old one."], ["Concurrent planning", "Demand, supply and inventory plans share one data model and recalculate together.", "A change in one place shows its effect everywhere at once, instead of passing between separate tools."], ["Scenario", "A private what-if copy of the plan that you can change and compare with the baseline.", "How planners test a change before committing it. Same idea as testing a fix in chapter 6."], ["Workbook, worksheet", "A workbook is a set of worksheets. A worksheet is a saved view of data: chosen columns, filters, calculations.", "A worksheet is a saved query. Your SELECT, WHERE and GROUP BY thinking carries over."], ["Hierarchy, filter", "Ways to roll data up (product family, region) and to narrow it (my items, my sites).", "GROUP BY and WHERE, chosen from menus."], ["Dashboard, scorecard", "Visual summaries of KPIs against targets.", "Where forecast accuracy and service level from chapter 7 are watched."], ["Data integration", "Scheduled loads that bring master data, orders and inventory in from source systems.", "Where dirty keys, duplicates and stale loads enter. Chapter 6 is how you find them."]],
+      tip: "If asked about Kinaxis experience, be exact about what you have and have not used, then bridge: \"I have not worked in Maestro itself. The work underneath it, validating inputs, tracing a wrong number, checking forecast accuracy, is what I do in SQL and Excel.\"",
+      steps: [
+        { t: 'text', h: 'What it is, in two sentences', key: "A planning platform where demand, supply and inventory are planned together on one data model.", html: `
+<p>Kinaxis Maestro (called RapidResponse until 2024) is a cloud platform companies use to plan their supply chain: forecast demand, plan supply and inventory, and respond when something changes. Its selling point is <strong>concurrent planning</strong>: every plan runs on the same data at the same time, so a change to a forecast shows its effect on inventory and replenishment straight away, and planners can test options in <strong>scenarios</strong> before committing.</p>
+<p>This summary is general product knowledge. How HAVI has configured it, and which parts this team owns, are good questions to ask them.</p>` },
+        { t: 'text', h: 'Where your skills fit', key: "The system plans. Someone has to make sure what goes in is right and what comes out makes sense.", html: `
+<div class="tablewrap"><table><thead><tr><th>In the planning system</th><th>What goes wrong</th><th>What you do about it</th><th>Chapter</th></tr></thead><tbody>
+<tr><td><strong>Data loads</strong> from source systems</td><td>Missing items, duplicate records, dirty keys, a load that did not run</td><td>Reconcile source against loaded data; duplicate and orphan checks; check load times</td><td>4, 6</td></tr>
+<tr><td><strong>Master data and parameters</strong> (lead time, safety stock)</td><td>A wrong setting produces a wrong recommendation</td><td>Query the parameters, compare with expected, test the change</td><td>6, 7</td></tr>
+<tr><td><strong>Forecast</strong></td><td>Biased or inaccurate; promotions not reflected</td><td>Bias and WAPE, split by promo, item, site</td><td>7</td></tr>
+<tr><td><strong>Replenishment output</strong></td><td>"Why did it not order?" "Why so much?"</td><td>Inventory position against reorder point; overdue receipts</td><td>7</td></tr>
+<tr><td><strong>Reports for planners and customers</strong></td><td>A number on a screen or report looks wrong</td><td>Trace it back; extract to Excel; explain with evidence</td><td>6, 8, 9</td></tr>
+</tbody></table></div>` },
+        { t: 'text', h: 'Questions worth asking them', key: "Good questions show you understand the job.", html: `
+<ul><li>Which data feeds into Maestro here, and how often do they load?</li>
+<li>When a planner reports a wrong number, where does the investigation usually start: in Maestro, or in the source data?</li>
+<li>How much of the role is configuring the system and how much is investigating data?</li>
+<li>How does the team test a parameter or rule change before it goes live?</li></ul>` },
+        { t: 'quiz', q: 'Which statement about a Maestro worksheet is closest to the truth?',
+          options: ['It is a blank spreadsheet for typing data', 'It is a saved view of planning data with chosen columns, filters and calculations, much like a saved query', 'It is a what-if copy of the plan'], correct: 1,
+          why: 'A worksheet presents data from the planning model through selected columns and filters. The what-if copy is a scenario.' },
+        { t: 'quiz', q: 'What does concurrent planning mean?',
+          options: ['Several planners can log in at once', 'Demand, supply and inventory plans share one model and update together when something changes', 'Plans are run one after another overnight'], correct: 1,
+          why: 'It is the opposite of sequential planning, where each function plans in turn and passes the result on.' }
       ]
     }
   ],

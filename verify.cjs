@@ -16,7 +16,7 @@ require('./vendor/sql-wasm.js')({ locateFile: () => path.resolve('vendor/sql-was
     const label = `${lesson.id} / ${s.h || s.id || 'quiz'}`;
     if (s.t === 'run') { run(label, s.sql); n.examples++; }
     if (s.t === 'compare') {
-      const [a, b] = [s.a, s.b].map((x, i) => x.sql ? run(`${label} [${'AB'[i]}]`, x.sql) : (assert(x.formula && x.shows, label), null));
+      const [a, b] = [s.a, s.b].map((x, i) => x.fails ? (assert.throws(() => ENGINE.run(x.sql), label), null) : x.sql ? run(`${label} [${'AB'[i]}]`, x.sql) : (assert(x.formula && x.shows, label), null));
       if (a && b && !/same answer/i.test(s.h)) assert.notDeepEqual(a.values, b.values, `${label}: both sides return the same rows`);
       n.comparisons++;
     }
