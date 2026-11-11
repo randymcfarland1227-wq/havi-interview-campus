@@ -258,6 +258,30 @@ code{background:var(--t-text);color:var(--code-ink);font-weight:500}
 :root[data-theme="dark"]{--chap-text:#a9c1ff}
 .core h2,.home h2,.lesson>.lhead>h1,.lesson .step>h3{color:var(--chap-text)}
 
+/* SQL reference */
+:root{--sql-table:#0d634d;--sql-column:#214da2;--sql-instruction:#733e10}
+:root[data-theme="dark"]{--sql-table:#8de0bc;--sql-column:#a8c8ff;--sql-instruction:#ffcc96}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--sql-table:#8de0bc;--sql-column:#a8c8ff;--sql-instruction:#ffcc96}
+}
+.sql-table{color:var(--sql-table)}
+.sql-column{color:var(--sql-column)}
+.sql-instruction{color:var(--sql-instruction)}
+.sql-legend{display:flex;align-items:baseline;gap:6px 12px;flex-wrap:wrap;font-size:.82rem;margin:12px 0 16px}
+.sql-legend span:not(:last-child){background:var(--chip);border-radius:4px;font-weight:700;padding:2px 6px}
+.sql-token{appearance:none;display:inline;margin:0;padding:0;border:0;border-radius:2px;background:none;font:inherit;text-align:inherit;vertical-align:baseline;cursor:help;text-decoration:underline dotted;text-underline-offset:.22em}
+.sql-token:hover,.sql-token:focus-visible{background:var(--bg);text-decoration-style:solid}
+.sql-token.sql-instruction{font-weight:700}
+.sql-tooltip{position:fixed;z-index:100;width:max-content;max-width:min(320px,calc(100vw - 16px));padding:10px 13px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);box-shadow:0 4px 16px #0003;font-size:.84rem;line-height:1.45}
+.sql-tooltip[hidden]{display:none}
+.sql-tooltip strong,.sql-tooltip span{display:block}
+.sql-tooltip strong{margin-bottom:3px}
+.sql-code{white-space:pre-wrap;overflow-wrap:anywhere}
+.terms{margin-bottom:12px}
+.terms summary{cursor:pointer;font-weight:600}
+.terms[open] summary{margin-bottom:10px}
+.exercise-prompt{white-space:pre-line}
+
 </style>
 </head>
 <body>
@@ -638,9 +662,9 @@ const COURSE = {
     /* ------------------------------------------------------------------ 1 */
     {
       id: 'read', title: 'SQL basics: tables, keys and how a statement is written', mins: 30, priority: 'Must',
-      builds: 'Start here. No SQL assumed, only what you already do in Excel and Alteryx.',
+      builds: 'Start with one product row. Find what identifies it, then turn a plain-English request into a query you can read and check one line at a time.',
       outcome: 'Name the parts of a table and of a statement, write a correct SELECT from scratch, and read an error message.',
-      core: [["Database, table", "A database is a set of tables. A table holds one kind of thing: orders, products.", "Like a workbook and its sheets, except every table has fixed columns."], ["Row, column", "A row is one record. A column is one attribute of it, with a fixed name and data type.", "You SELECT columns and filter rows. Mixing the two up is the first beginner error."], ["Data type", "What a column can hold: whole number, decimal, text, date, true/false.", "Decides how you write a value: 'text' and '2026-11-04' in single quotes, numbers bare."], ["Primary key", "The column (or columns) that is different on every row.", "Identifies a row. It is what other tables point at and what you check for duplicates."], ["Foreign key", "A column that holds another table's primary key.", "Tells you which tables join, and on what."], ["Grain", "What one row represents.", "A count or sum at the wrong grain is the most common wrong answer."], ["Statement, clause", "A statement is one complete instruction ending in ;. A clause is one part of it: SELECT, FROM, WHERE.", "Clauses must appear in a fixed order."], ["Keyword, identifier, literal", "Keyword = SQL's own word (SELECT). Identifier = a table or column name. Literal = a value you type ('Frozen', 50).", "Explains most syntax errors: a literal without quotes is read as a column name."], ["Alias (AS)", "A temporary name for a column or table, for this statement only.", "Makes output readable and joins shorter. A missing comma creates one by accident."], ["NULL", "No value recorded. Not zero, not blank text.", "Needs IS NULL, and turns any calculation into NULL."], ["Run order", "FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY", "Explains why WHERE cannot use a total or a SELECT alias."]],
+      core: [["Database, table", "A database is a set of tables. A table holds one kind of thing: orders, products.", "Like a workbook and its sheets, except every table has fixed columns."], ["Row, column", "A row is one record. A column is one attribute of it, with a fixed name and data type.", "You SELECT columns and filter rows. Mixing the two up is the first beginner error."], ["Data type", "What a column can hold: whole number, decimal, text, date, true/false.", "Decides how you write a value: 'text' and '2026-11-04' in single quotes, numbers bare."], ["Primary key", "The column (or columns) that is different on every row.", "Identifies a row. It is what other tables point at and what you check for duplicates."], ["Foreign key", "A column or set of columns that references a unique key in another table.", "Shows how two records are related. You can also join two tables that both reference the same record."], ["Grain", "What one row represents.", "A count or sum at the wrong grain is the most common wrong answer."], ["Statement, clause", "A statement is one complete instruction ending in ;. A clause is one part of it: SELECT, FROM, WHERE.", "Clauses must appear in a fixed order."], ["Keyword, identifier, literal", "Keyword = SQL's own word (SELECT). Identifier = a table or column name. Literal = a value you type ('Frozen', 50).", "Explains most syntax errors: a literal without quotes is read as a column name."], ["Column label (AS)", "A heading for a column or calculated value in the query result.", "Makes output readable and joins shorter. A missing comma creates one by accident."], ["NULL", "No value recorded. Not zero, not blank text.", "Needs IS NULL, and turns any calculation into NULL."], ["Run order", "FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY", "Explains why WHERE cannot use a total or a SELECT alias."]],
       tip: "Before you write anything, say: \"one row in this table is …, and its key is …\". Then write FROM first. It shows you understand the data before the syntax.",
       steps: [
         { t: 'text', h: 'The case you will solve', key: "One wrong number on a screen, traced back to its cause. Each chapter adds one tool.", html: `
@@ -679,8 +703,8 @@ const COURSE = {
 <p>The type decides what works. You can add two INTs, you cannot add two VARCHARs. A number stored as text sorts as text ("100" before "20") and will not sum. An ID such as <code>'P01'</code> is text even when it looks numeric, so it needs quotes.</p>` },
         { t: 'run', h: 'Look at real rows first', key: "First move with any table: look at five rows.", sql: `SELECT TOP 5 *\nFROM order_lines;`,
           note: `<code>*</code> means every column. <code>TOP 5</code> means stop after five rows. Do this before anything else with an unfamiliar table: you are reading the data, not answering a question yet.` },
-        { t: 'text', h: 'Keys: how tables point at each other', key: "A primary key identifies a row. A foreign key is another table's primary key, stored here so the two can be joined.", html: `
-<div class="tablewrap"><table><thead><tr><th>Table</th><th>Primary key</th><th>Foreign keys (and what they point at)</th></tr></thead><tbody>
+        { t: 'text', h: 'Keys: how tables point at each other', key: "A primary key identifies a row in its own table. A foreign key points to a row in another table.", html: `
+<div class="tablewrap"><table><thead><tr><th>Table</th><th>Row identifier in this model</th><th>References to other tables</th></tr></thead><tbody>
 <tr><td><code>products</code></td><td><strong>product_id</strong></td><td>none</td></tr>
 <tr><td><code>locations</code></td><td><strong>location_id</strong></td><td>none</td></tr>
 <tr><td><code>orders</code></td><td><strong>order_id</strong></td><td>location_id → locations</td></tr>
@@ -689,9 +713,9 @@ const COURSE = {
 <tr><td><code>inventory</code></td><td><strong>snapshot_date + location_id + product_id</strong></td><td>location_id → locations · product_id → products</td></tr>
 </tbody></table></div>
 <ul><li>A primary key is <strong>unique</strong> and never NULL. Two rows cannot share it.</li>
-<li>A key made of several columns, like the one on inventory, is a <strong>composite key</strong>. You need all of its columns to identify one row.</li>
-<li>A foreign key <em>should</em> always match a row in the table it points at. When it does not, you have an <strong>orphan</strong>, and finding those is a large part of this job (chapters 4 and 6).</li>
-<li>The table with the primary key is the "one" side; the table holding the foreign key is the "many" side. One order, many order lines.</li></ul>` },
+<li>A key made of several columns is a <strong>composite key</strong>. In the inventory example, date, location, and product together identify a row.</li>
+<li>In a database with an enforced foreign key, a value must match the row it points to. The practice data leaves those references unenforced so you can investigate <strong>orphans</strong> in chapters 4 and 6.</li>
+<li>A primary key can have many rows pointing to it. For example, several order lines can reference the same order.</li></ul>` },
         { t: 'text', h: 'Grain and key: the two facts that prevent wrong numbers', key: "Grain = what one row means. Key = what makes each row unique.", html: `
 <p><strong>Grain</strong> is what one row represents. <strong>Key</strong> is the column, or set of columns, that is different on every row.</p>
 <ul><li><code>orders</code>: one row per order. Key: <code>order_id</code>.</li>
@@ -699,7 +723,7 @@ const COURSE = {
 <li><code>screen_orders</code>: one row per order as the screen shows it.</li></ul>
 <p>Most wrong totals come from treating a table as if it had a different grain than it has. Counting rows in <code>order_lines</code> counts lines, not orders.</p>` },
         { t: 'compare', h: 'Same order, two grains',
-          intro: 'Order O1001 in the header table and in the detail table.',
+          intro: 'Customer support needs the status and the item list for O1001. Check which table has each answer and what one row represents.',
           a: { label: 'orders (header)', sql: `SELECT order_id, status\nFROM orders\nWHERE order_id = 'O1001';` },
           b: { label: 'order_lines (detail)', sql: `SELECT order_id, product_id, qty_ordered\nFROM order_lines\nWHERE order_id = 'O1001';` },
           diff: 'One order is one row in orders and two rows in order_lines.',
@@ -732,14 +756,14 @@ ORDER BY unit_cost DESC;</pre>
 <tr><td>Missing values use IS</td><td><code>qty_shipped IS NULL</code></td><td><code>qty_shipped = NULL</code></td></tr>
 </tbody></table></div>
 <p>Things that do <strong>not</strong> matter: capitals in keywords, line breaks, and extra spaces. <code>select * from orders</code> on one line is the same statement. Comments start with <code>--</code> and are ignored.</p>` },
-        { t: 'compare', h: 'A missing comma is not an error. It is an alias.',
-          intro: 'Request: product_id and product_name for every product.',
+        { t: 'compare', h: 'A missing comma can accidentally rename a result column',
+          intro: 'A planner needs a product export with two columns: product_id and product_name.',
           a: { label: 'Comma left out', sql: `SELECT product_id product_name\nFROM products;` },
           b: { label: 'Comma in place', sql: `SELECT product_id, product_name\nFROM products;` },
           diff: 'Without the comma, SQL reads product_name as a new name for product_id. You get one column of IDs under the wrong heading, and no error. Count the columns in your result against what was asked.',
           use: ['One comma between every pair of columns in SELECT', 'No comma after the last column, before FROM', 'A result with fewer columns than expected → look for a missing comma'] },
         { t: 'compare', h: 'Text without quotes is read as a column name',
-          intro: 'Request: the Frozen products.',
+          intro: 'A planner needs a product list filtered to the Frozen category. Here are two ways someone might type the filter.',
           a: { label: 'No quotes', fails: true, sql: `SELECT product_id, product_name\nFROM products\nWHERE category = Frozen;` },
           b: { label: 'Single quotes', sql: `SELECT product_id, product_name\nFROM products\nWHERE category = 'Frozen';` },
           diff: "Without quotes, Frozen is an identifier, so the database looks for a column called Frozen and fails. SQL Server's wording is: Invalid column name 'Frozen'. That message nearly always means missing quotes or a misspelt column.",
@@ -766,7 +790,7 @@ ORDER BY unit_cost DESC;</pre>
 <tr><td><strong>Invalid column name 'x'</strong></td><td>Misspelt column, text without quotes, or an alias used in WHERE</td><td>Check the spelling in Tables; add quotes; repeat the expression</td></tr>
 <tr><td><strong>Invalid object name 'x'</strong></td><td>Misspelt or wrong table name</td><td>Check the table name</td></tr>
 <tr><td><strong>Incorrect syntax near 'x'</strong></td><td>Something just before x is missing or extra: a comma, a keyword, a bracket</td><td>Look at the word <em>before</em> the one named</td></tr>
-<tr><td><strong>Ambiguous column name 'x'</strong></td><td>Two joined tables both have x</td><td>Prefix it: <code>o.order_id</code></td></tr>
+<tr><td><strong>Ambiguous column name 'x'</strong></td><td>Two joined tables both have x</td><td>Prefix it: <code>orders.order_id</code></td></tr>
 <tr><td><strong>… is invalid in the select list because it is not contained in either an aggregate function or the GROUP BY clause</strong></td><td>A SELECT column that is neither grouped nor aggregated</td><td>Add it to GROUP BY or wrap it in SUM, MAX …</td></tr>
 <tr><td><strong>Conversion failed when converting …</strong></td><td>Comparing or adding text with a number or date</td><td>Fix the quotes, or CAST one side</td></tr>
 <tr><td><strong>Divide by zero error encountered</strong></td><td>A divisor of 0</td><td><code>NULLIF(divisor, 0)</code></td></tr>
@@ -782,19 +806,19 @@ ORDER BY unit_cost DESC;</pre>
 </tbody></table></div>
 <p>An UPDATE or DELETE with no WHERE changes <strong>every row</strong>. The safe habit, worth saying in an interview: run a SELECT with the same WHERE first, check the rows, then change them. This practice database is read-only, so only SELECT runs here.</p>` },
         { t: 'try', id: 'basics-first', title: 'Your first statement',
-          prompt: 'Return product_name and category for every product, sorted by product_name.',
+          prompt: "A planner needs a readable product list for an Excel export.\n\nFrom products, return one row per product with product_name and category. Sort alphabetically by product_name.",
           starter: `SELECT \nFROM \nORDER BY ;`,
           solution: `SELECT product_name, category\nFROM products\nORDER BY product_name;`, ordered: true,
           hints: ['The table is products.', 'Two columns, separated by a comma.', 'ORDER BY product_name'],
           explain: 'No WHERE, so all six rows come back. Two columns in the order asked for.' },
         { t: 'try', id: 'basics-alias', title: 'Filter, rename, sort',
-          prompt: 'Return product_id and unit_cost (renamed cost) for products whose lead_time_days is greater than 2. Sort by product_id.',
+          prompt: "A replenishment planner is checking costs for products with longer lead times.\n\nFrom products, keep lead_time_days greater than 2. Return product_id and unit_cost under the heading cost. Sort by product_id.",
           starter: `SELECT product_id, unit_cost AS \nFROM products\nWHERE `,
           solution: `SELECT product_id, unit_cost AS cost\nFROM products\nWHERE lead_time_days > 2\nORDER BY product_id;`, ordered: true,
           hints: ['AS cost renames the column.', 'lead_time_days is a number: no quotes around 2.', 'You can filter on a column you do not show.'],
           explain: 'WHERE can test a column that is not in SELECT. The filter runs before the columns are chosen.' },
         { t: 'try', id: 'basics-fix', title: 'Fix the syntax',
-          prompt: 'This statement should return location_id, location_name and region for locations in the South region, sorted by location_name. It has three syntax mistakes. Fix them.',
+          prompt: "An extract for the South region fails because the starter query has three syntax mistakes.\n\nFix the query against locations. Return location_id, location_name, and region for South only, sorted by location_name.",
           starter: `SELECT location_id location_name region\nFROM locations\nWHERE region = "South"\nORDER location_name;`,
           solution: `SELECT location_id, location_name, region\nFROM locations\nWHERE region = 'South'\nORDER BY location_name;`, ordered: true,
           hints: ['Count the commas in SELECT.', 'Text needs single quotes.', 'ORDER BY is two words.'],
@@ -810,7 +834,7 @@ ORDER BY unit_cost DESC;</pre>
     /* ------------------------------------------------------------------ 2 */
     {
       id: 'filter', title: 'SELECT, WHERE and ORDER BY', mins: 25, priority: 'Must',
-      builds: 'You can read a table. Now ask it for specific rows and columns.',
+      builds: 'Start with a list of products. Choose what to show, keep the rows that pass your test, then sort them. The same pattern handles dates, missing values, and several conditions.',
       outcome: 'Write a filtered, sorted query from a plain-English request, and avoid the three filter mistakes that return wrong rows without an error.',
       core: [["SELECT", "Chooses the columns to show.", "Name the columns. Keep SELECT * for a first look only."], ["WHERE", "Keeps the rows that pass a test.", "Runs before grouping, so it cannot test a total."], ["AND / OR", "Combine tests.", "AND runs first. Put brackets around every OR group."], ["IN, BETWEEN, LIKE", "Match a list, a range, a text pattern.", "BETWEEN misses the last day on a date-and-time column."], ["IS NULL", "Tests for a missing value.", "= NULL returns no rows and no error."], ["ORDER BY, TOP", "Sort the output. Keep the first N rows.", "TOP without ORDER BY returns arbitrary rows."], ["DISTINCT", "Removes repeated rows from the output.", "Good for exploring values. It can also hide a real duplicate."]],
       tip: "Say the request as rules in plain English first, then write one rule per WHERE line.",
@@ -828,19 +852,19 @@ ORDER BY unit_cost DESC;</pre>
 <tr><td><code>AND</code> <code>OR</code> <code>NOT</code></td><td>combine tests</td><td><code>promo = 1 AND location_id = 'L01'</code></td></tr>
 </tbody></table></div>` },
         { t: 'compare', h: 'AND runs before OR',
-          intro: 'Request: Chicago (L01) plan rows that are either promotional or sold more than 150 units.',
+          intro: 'The Chicago planner wants rows for L01 only. Include a row if it is promotional, sold more than 150 units, or both.',
           a: { label: 'No parentheses', sql: `SELECT plan_id, location_id, promo, actual_units\nFROM daily_plan\nWHERE location_id = 'L01'\n  AND promo = 1\n   OR actual_units > 150;` },
           b: { label: 'With parentheses', sql: `SELECT plan_id, location_id, promo, actual_units\nFROM daily_plan\nWHERE location_id = 'L01'\n  AND (promo = 1\n   OR actual_units > 150);` },
           diff: 'Without parentheses SQL reads it as (L01 AND promo) OR (over 150 anywhere), so Denver and Atlanta rows leak in. Look at the location_id column on the left.',
           use: ['Any time AND and OR appear together, add parentheses around the OR group', 'Say the rule in English first, then bracket it the way you said it'] },
-        { t: 'compare', h: '= NULL finds nothing. IS NULL finds the missing values.',
-          intro: 'Request: order lines that have not shipped yet. qty_shipped is empty (NULL) until a line ships.',
+        { t: 'compare', h: 'Find lines with no shipped quantity',
+          intro: 'The shipping team wants the line ID, order ID, and shipped quantity for lines with no quantity recorded. In the results, the shipped quantity should be NULL.',
           a: { label: '= NULL', sql: `SELECT line_id, order_id, qty_shipped\nFROM order_lines\nWHERE qty_shipped = NULL;` },
           b: { label: 'IS NULL', sql: `SELECT line_id, order_id, qty_shipped\nFROM order_lines\nWHERE qty_shipped IS NULL;` },
-          diff: 'NULL means unknown. Nothing equals unknown, not even another NULL, so = NULL returns zero rows and no error. That silence is what makes it dangerous.',
-          use: ['Missing value → IS NULL', 'Value present → IS NOT NULL', 'NULL is not zero: line 12 shipped 0 units and is not in this list'] },
+          diff: 'IS NULL tests whether a value is missing and returns four lines. The comparison = NULL evaluates to unknown, so WHERE keeps zero rows. A recorded zero stays out of the missing-value list.',
+          use: ['Missing value → IS NULL', 'Value present → IS NOT NULL', 'Recorded zero → qty_shipped = 0. Try line 12.'] },
         { t: 'compare', h: 'BETWEEN drops the last day when the column has a time',
-          intro: 'Request: screen rows synced from Nov 2 through Nov 4. synced_at holds a date and a time.',
+          intro: 'Support needs order IDs and sync timestamps from November 2 through the end of November 4, 2026. The timestamp includes a time of day.',
           a: { label: 'BETWEEN', sql: `SELECT order_id, synced_at\nFROM screen_orders\nWHERE synced_at BETWEEN '2026-11-02'\n                    AND '2026-11-04';` },
           b: { label: '>= start AND < day after', sql: `SELECT order_id, synced_at\nFROM screen_orders\nWHERE synced_at >= '2026-11-02'\n  AND synced_at <  '2026-11-05';` },
           diff: "'2026-11-04' means midnight at the start of Nov 4. A row stamped 06:00 that morning is after it, so BETWEEN leaves it out. SQL Server datetime columns behave the same way.",
@@ -848,19 +872,19 @@ ORDER BY unit_cost DESC;</pre>
         { t: 'run', h: 'DISTINCT, LIKE and TOP', key: "Three small tools for exploring a column.", sql: `SELECT DISTINCT status\nFROM orders;`,
           note: `<code>DISTINCT</code> removes repeated rows from the output, which is the quickest way to see what values a column holds. <code>WHERE customer LIKE 'Store 1%'</code> would keep customers starting with "Store 1". <code>SELECT TOP 3 … ORDER BY qty_ordered DESC</code> gives the three largest. TOP without ORDER BY gives three arbitrary rows.` },
         { t: 'try', id: 'filter-promo', title: 'Promotional rows that beat forecast',
-          prompt: 'From daily_plan, return plan_id, product_id, forecast_units and actual_units for location L01 rows where promo is 1 and actual_units is greater than forecast_units. Sort by plan_id.',
+          prompt: "The Chicago planner wants to review promotions that sold more than forecast.\n\nFrom daily_plan, keep L01 rows where promo is 1 and actual_units exceeds forecast_units. Return plan_id, product_id, forecast_units, and actual_units. Sort by plan_id.",
           starter: `SELECT plan_id, product_id, forecast_units, actual_units\nFROM daily_plan\nWHERE `,
           solution: `SELECT plan_id, product_id, forecast_units, actual_units\nFROM daily_plan\nWHERE location_id = 'L01'\n  AND promo = 1\n  AND actual_units > forecast_units\nORDER BY plan_id;`, ordered: true,
           hints: ['Three tests joined by AND.', "location_id = 'L01' AND promo = 1 AND actual_units > forecast_units", 'Finish with ORDER BY plan_id.'],
           explain: 'You can compare two columns of the same row directly. All seven L01 promo rows sold above forecast.' },
         { t: 'try', id: 'filter-open', title: 'Recent orders that are not finished',
-          prompt: "From orders, return order_id, order_date and status for orders placed on or after 2026-11-03 whose status is Open or Cancelled. Sort by order_id.",
+          prompt: "The operations team wants a follow-up list of recent orders that are Open or Cancelled.\n\nFrom orders, include orders dated November 3, 2026 or later with either of those statuses. Return order_id, order_date, and status. Sort by order_id.",
           starter: `SELECT order_id, order_date, status\nFROM orders\nWHERE `,
           solution: `SELECT order_id, order_date, status\nFROM orders\nWHERE order_date >= '2026-11-03'\n  AND status IN ('Open', 'Cancelled')\nORDER BY order_id;`, ordered: true,
           hints: ['One date test AND one status test.', "status IN ('Open', 'Cancelled') avoids the AND/OR trap.", "order_date >= '2026-11-03'"],
           explain: 'IN keeps the two statuses in one test, so there is no OR to bracket.' },
         { t: 'try', id: 'filter-null', title: 'Lines waiting to ship',
-          prompt: 'From order_lines, return line_id, order_id and qty_ordered for lines with no shipped quantity recorded. Sort by line_id.',
+          prompt: "The shipping team wants to investigate lines with no shipment quantity recorded.\n\nFrom order_lines, return line_id, order_id, and qty_ordered for rows where qty_shipped is missing. A recorded zero is a value. Sort by line_id.",
           starter: `SELECT line_id, order_id, qty_ordered\nFROM order_lines\n`,
           solution: `SELECT line_id, order_id, qty_ordered\nFROM order_lines\nWHERE qty_shipped IS NULL\nORDER BY line_id;`, ordered: true,
           hints: ['"No quantity recorded" is a missing value, not zero.', 'WHERE qty_shipped IS NULL'],
@@ -873,7 +897,7 @@ ORDER BY unit_cost DESC;</pre>
     /* ------------------------------------------------------------------ 3 */
     {
       id: 'aggregate', title: 'COUNT, SUM, GROUP BY and HAVING', mins: 25, priority: 'Must',
-      builds: 'You can pick rows. Now collapse many rows into totals, the way a PivotTable does.',
+      builds: 'Start with individual order lines and roll them up to one row per order. Choose what to count, then decide whether a condition applies to an individual line or to its order total.',
       outcome: 'Produce totals per group, choose the right COUNT, and decide between WHERE and HAVING.',
       core: [["COUNT(*)", "Counts rows.", "On a detail table it counts lines, not orders."], ["COUNT(column)", "Counts rows where that column has a value.", "Shows how many values are missing."], ["COUNT(DISTINCT column)", "Counts different values.", "The safe way to count orders after a join."], ["SUM, AVG, MIN, MAX", "Total, average, smallest, largest.", "All skip NULL, so AVG divides by fewer rows than you expect."], ["GROUP BY", "Returns one row per group.", "Every SELECT column must be in GROUP BY or inside a function."], ["HAVING", "Keeps groups that pass a test on a total.", "WHERE filters rows before the total. HAVING filters totals after."]],
       tip: "When asked \"how many\", ask back: \"how many of what: rows, orders or products?\"",
@@ -886,31 +910,31 @@ ORDER BY unit_cost DESC;</pre>
         { t: 'run', h: 'GROUP BY: one row per order', key: "GROUP BY is a PivotTable: one output row per group.", sql: `SELECT order_id,\n       COUNT(*)         AS line_count,\n       SUM(qty_ordered) AS total_ordered\nFROM order_lines\nGROUP BY order_id\nORDER BY order_id;`,
           note: `This is a PivotTable with order_id in Rows and two Values. <strong>The rule:</strong> every column in SELECT must either be inside an aggregate function or be listed in GROUP BY. SQL Server rejects the query otherwise. (This practice database is more forgiving and will not warn you, so check it yourself.)` },
         { t: 'compare', h: 'WHERE filters rows before the total. HAVING filters totals after.',
-          intro: 'Both mention "more than 50", and they answer different questions.',
+          intro: 'A warehouse manager might ask for two reports: totals using only lines above 50 units, or orders whose total across all lines exceeds 50 units.',
           a: { label: 'WHERE: big lines only', sql: `SELECT order_id,\n       SUM(qty_ordered) AS total_qty\nFROM order_lines\nWHERE qty_ordered > 50\nGROUP BY order_id\nORDER BY order_id;` },
           b: { label: 'HAVING: big orders only', sql: `SELECT order_id,\n       SUM(qty_ordered) AS total_qty\nFROM order_lines\nGROUP BY order_id\nHAVING SUM(qty_ordered) > 50\nORDER BY order_id;` },
           diff: 'Look at O1001: 60 on the left, 100 on the right. WHERE threw away its 40-unit line before adding. HAVING added everything, then kept orders whose total passed.',
           use: ['Condition on a single row (a date, a status, one quantity) → WHERE', 'Condition on a total or a count → HAVING', 'You can use both in one query: WHERE first, HAVING after GROUP BY'] },
         { t: 'compare', h: 'An average ignores NULL unless you tell it otherwise',
-          intro: 'Average units shipped per line. Four lines have not shipped and hold NULL.',
+          intro: 'Fulfillment needs an average per line. Decide whether to average only lines with a shipment quantity or include all lines and treat missing quantities as zero.',
           a: { label: 'AVG skips NULL', sql: `SELECT AVG(qty_shipped) AS avg_shipped\nFROM order_lines;` },
           b: { label: 'NULL counted as 0', sql: `SELECT AVG(ISNULL(qty_shipped, 0))\n         AS avg_shipped\nFROM order_lines;` },
           diff: 'Left divides by the 8 lines that have a value. Right divides by all 12. Neither is wrong; they answer different questions.',
           use: ['"Average of the lines that shipped" → plain AVG', '"Average across all lines, unshipped counted as zero" → ISNULL(x, 0) inside', 'State which one you used when you report the number'] },
         { t: 'try', id: 'agg-order', title: 'Orders with more than one line',
-          prompt: 'From order_lines, return order_id, line_count and total_ordered (sum of qty_ordered) for orders that have more than one line. Sort by order_id.',
+          prompt: "A warehouse analyst needs an order-level summary of orders that contain several lines.\n\nGroup order_lines by order_id. Keep orders with more than one line and return order_id, line_count, and total_ordered (the sum of qty_ordered). Sort by order_id.",
           starter: `SELECT order_id,\n       COUNT(*) AS line_count,\n       SUM(qty_ordered) AS total_ordered\nFROM order_lines\n`,
           solution: `SELECT order_id,\n       COUNT(*) AS line_count,\n       SUM(qty_ordered) AS total_ordered\nFROM order_lines\nGROUP BY order_id\nHAVING COUNT(*) > 1\nORDER BY order_id;`, ordered: true,
           hints: ['Group by order_id first.', '"More than one line" is a test on a count, so it goes in HAVING.', 'HAVING COUNT(*) > 1'],
           explain: 'A test on COUNT belongs in HAVING. On SQL Server, repeat the function in HAVING rather than the alias.' },
         { t: 'try', id: 'agg-location', title: 'Forecast and actual by location',
-          prompt: 'From daily_plan, return location_id, forecast_total, actual_total and rows_with_actuals (the number of rows that have an actual value) for each location. Sort by location_id.',
+          prompt: "A planner needs a location summary and a way to spot incomplete actuals.\n\nFrom daily_plan, return one row per location with location_id, forecast_total, actual_total, and rows_with_actuals (the count of rows with actual_units present). Sort by location_id.",
           starter: `SELECT location_id,\n       \nFROM daily_plan\n`,
           solution: `SELECT location_id,\n       SUM(forecast_units) AS forecast_total,\n       SUM(actual_units)   AS actual_total,\n       COUNT(actual_units) AS rows_with_actuals\nFROM daily_plan\nGROUP BY location_id\nORDER BY location_id;`, ordered: true,
           hints: ['Two SUMs and one COUNT.', 'COUNT(actual_units) skips the NULL, COUNT(*) would not.', 'GROUP BY location_id'],
           explain: 'L03 has six rows and only five actuals. Reporting the count next to the total shows the reader that one feed is missing.' },
         { t: 'try', id: 'agg-having', title: 'High-volume products',
-          prompt: 'From daily_plan, return product_id and total_actual for products with more than 500 actual units in total. Sort by total_actual, highest first.',
+          prompt: "A planner wants to focus a review on products that sold more than 500 units across the plan.\n\nFrom daily_plan, sum actual_units for each product and keep product totals greater than 500. Return product_id and total_actual, highest total first.",
           starter: `SELECT product_id,\n       SUM(actual_units) AS total_actual\nFROM daily_plan\n`,
           solution: `SELECT product_id,\n       SUM(actual_units) AS total_actual\nFROM daily_plan\nGROUP BY product_id\nHAVING SUM(actual_units) > 500\nORDER BY total_actual DESC;`, ordered: true,
           hints: ['GROUP BY product_id', 'HAVING SUM(actual_units) > 500', 'ORDER BY can use the alias total_actual.'],
@@ -923,80 +947,80 @@ ORDER BY unit_cost DESC;</pre>
     /* ------------------------------------------------------------------ 4 */
     {
       id: 'joins', title: 'JOIN: connect tables by key', mins: 35, priority: 'Must',
-      builds: 'You can filter and total one table. Real questions need columns from two or three.',
+      builds: 'Start with an order line and attach its product name. Then use the same matching rule to see which rows are kept, which are missing, and how extra matches change your totals.',
       outcome: 'Choose INNER or LEFT on purpose, find rows with no match, and notice when a join has changed your row count.',
-      core: [["INNER JOIN", "Returns rows that match in both tables.", "Unmatched rows disappear with no warning."], ["LEFT JOIN", "Returns every left row, with NULL where nothing matches.", "The safe default for totals and audits."], ["ON", "The rule that pairs rows.", "Use the whole key. A right-table filter goes here if left rows must stay."], ["LEFT JOIN + IS NULL", "Lists rows that have no match.", "The standard \"what is missing?\" query."], ["Fan-out", "One row matching many is repeated once per match.", "Inflates every COUNT and SUM taken afterwards."], ["FULL OUTER JOIN", "Keeps unmatched rows from both sides.", "Used to reconcile two systems."], ["UNION ALL, UNION", "Stack rows from two queries. UNION also removes duplicates.", "Stacking is not matching. UNION can hide repeats."]],
+      core: [["INNER JOIN", "Returns rows that match in both tables.", "Unmatched rows disappear with no warning."], ["LEFT JOIN", "Returns every left row, with NULL where nothing matches.", "Use it when every starting row must stay. Check whether multiple matches repeat a row."], ["ON", "The rule that pairs rows.", "Use the whole key. A right-table filter goes here if left rows must stay."], ["LEFT JOIN + IS NULL", "Lists rows that have no match.", "The standard \"what is missing?\" query."], ["Fan-out", "One row matching many is repeated once per match.", "Inflates every COUNT and SUM taken afterwards."], ["FULL OUTER JOIN", "Keeps unmatched rows from both sides.", "Used to reconcile two systems."], ["UNION ALL, UNION", "Stack rows from two queries. UNION also removes duplicates.", "Stacking is not matching. UNION can hide repeats."]],
       tip: "After every join, say what one row means now and whether the row count went up, down or stayed the same.",
       steps: [
         { t: 'text', h: 'Why tables are split, and how a join puts them back', key: "A join pairs rows where the key is equal and sets their columns side by side.", html: `
 <p>An order line stores <code>product_id</code>, not the product name. The name lives once in <code>products</code>. A join matches rows from two tables where a key is equal and puts their columns side by side. It is XLOOKUP, except it can return many columns and many matches.</p>
-<pre class="code">SELECT l.line_id, l.product_id, p.product_name
-FROM order_lines AS l
-JOIN products    AS p
-  ON l.product_id = p.product_id;</pre>
-<ul><li><code>AS l</code> and <code>AS p</code> are nicknames (aliases) so you do not retype table names.</li>
-<li><code>l.product_id</code> means the product_id column from order_lines. The prefix is required when both tables have a column with that name.</li>
-<li><code>ON</code> states which values must be equal for two rows to pair up.</li>
-<li>Row position is irrelevant. Only key values matter.</li></ul>` },
+<pre class="code">SELECT order_lines.line_id, order_lines.product_id, products.product_name
+FROM order_lines
+JOIN products
+  ON order_lines.product_id = products.product_id;</pre>
+<ol><li>Read <code>FROM order_lines</code> first. Each row you start with is one line on an order.</li>
+<li>Read <code>JOIN products</code> next. This is the catalog that supplies the name.</li>
+<li>Read <code>order_lines.product_id</code> as “product ID from order lines.” It points to the primary key <code>products.product_id</code>. The <code>ON</code> line pairs rows with equal IDs.</li>
+<li>Go back to <code>SELECT</code>. It shows two columns from the order line and one from the product catalog.</li></ol>` },
         { t: 'compare', h: 'INNER JOIN keeps matches. LEFT JOIN keeps every left row.',
-          intro: 'Four order lines joined to the product list. Two of them carry a product_id the product list does not recognise.',
-          a: { label: 'INNER JOIN (or just JOIN)', sql: `SELECT l.line_id, l.product_id,\n       p.product_name\nFROM order_lines l\nINNER JOIN products p\n  ON l.product_id = p.product_id\nWHERE l.order_id IN ('O1004','O1005')\nORDER BY l.line_id;` },
-          b: { label: 'LEFT JOIN', sql: `SELECT l.line_id, l.product_id,\n       p.product_name\nFROM order_lines l\nLEFT JOIN products p\n  ON l.product_id = p.product_id\nWHERE l.order_id IN ('O1004','O1005')\nORDER BY l.line_id;` },
+          intro: 'Add product names to the four lines for O1004 and O1005. For a catalog audit, keep lines with unknown product codes visible.',
+          a: { label: 'INNER JOIN (or just JOIN)', sql: `SELECT order_lines.line_id, order_lines.product_id,\n       products.product_name\nFROM order_lines\nINNER JOIN products\n  ON order_lines.product_id = products.product_id\nWHERE order_lines.order_id IN ('O1004','O1005')\nORDER BY order_lines.line_id;` },
+          b: { label: 'LEFT JOIN', sql: `SELECT order_lines.line_id, order_lines.product_id,\n       products.product_name\nFROM order_lines\nLEFT JOIN products\n  ON order_lines.product_id = products.product_id\nWHERE order_lines.order_id IN ('O1004','O1005')\nORDER BY order_lines.line_id;` },
           diff: 'INNER silently dropped lines 8 and 9. LEFT kept them and filled the product columns with NULL. "Left" means the table written first, after FROM.',
           use: ['Totals, audits, anything where losing a row would be wrong → LEFT JOIN from the table you must keep', 'A report that should only show fully matched records → INNER JOIN', 'Unsure → LEFT, then check for NULLs'] },
-        { t: 'run', h: 'LEFT JOIN + IS NULL: list what has no match', key: "Keep every row, then keep only the ones where the other side is empty.", sql: `SELECT l.line_id, l.order_id, l.product_id\nFROM order_lines l\nLEFT JOIN products p\n  ON l.product_id = p.product_id\nWHERE p.product_id IS NULL;`,
+        { t: 'run', h: 'LEFT JOIN + IS NULL: list what has no match', key: "Keep every row, then keep only the ones where the other side is empty.", sql: `SELECT order_lines.line_id, order_lines.order_id, order_lines.product_id\nFROM order_lines\nLEFT JOIN products\n  ON order_lines.product_id = products.product_id\nWHERE products.product_id IS NULL;`,
           note: `Keep every line, then keep only the ones where the product side came back empty. This is the single most useful troubleshooting query: it answers "which records reference something that does not exist?" Line 8 uses an unknown code. Line 9 looks like P02 but does not match. Lesson 6 finds out why.` },
-        { t: 'compare', h: 'A filter on the right table: ON keeps the left rows, WHERE removes them',
-          intro: 'Request: every order, with its screen row if the screen shows it as Open.',
-          a: { label: 'Filter in WHERE', sql: `SELECT o.order_id, s.status AS screen_status\nFROM orders o\nLEFT JOIN screen_orders s\n  ON o.order_id = s.order_id\nWHERE s.status = 'Open'\nORDER BY o.order_id;` },
-          b: { label: 'Filter in ON', sql: `SELECT o.order_id, s.status AS screen_status\nFROM orders o\nLEFT JOIN screen_orders s\n  ON o.order_id = s.order_id\n AND s.status = 'Open'\nORDER BY o.order_id;` },
-          diff: 'WHERE runs after the join and throws out rows where s.status is NULL, which turns the LEFT JOIN back into an INNER JOIN. Putting the test in ON only limits which screen rows may match; all six orders stay.',
+        { t: 'compare', h: 'Filter a LEFT JOIN with ON or WHERE',
+          intro: 'Start from every order. Should a closed order still appear with an empty screen status, or should it drop out of the results?',
+          a: { label: 'Filter in WHERE', sql: `SELECT orders.order_id, screen_orders.status\nFROM orders\nLEFT JOIN screen_orders\n  ON orders.order_id = screen_orders.order_id\nWHERE screen_orders.status = 'Open'\nORDER BY orders.order_id;` },
+          b: { label: 'Filter in ON', sql: `SELECT orders.order_id, screen_orders.status\nFROM orders\nLEFT JOIN screen_orders\n  ON orders.order_id = screen_orders.order_id\n AND screen_orders.status = 'Open'\nORDER BY orders.order_id;` },
+          diff: 'ON checks whether a screen row is eligible to match. All six orders stay, and orders without an Open match show NULL on the screen side. WHERE checks the joined rows and keeps only the three whose screen status is Open.',
           use: ['Condition about the right-hand table, and you still want every left row → put it in ON', 'Condition about the left-hand table → WHERE', 'If a LEFT JOIN returns fewer rows than the left table, look for a right-table test in WHERE'] },
         { t: 'compare', h: 'A join can multiply rows',
-          intro: 'How many orders are there? One query joins to the lines first.',
-          a: { label: 'Count after joining', sql: `SELECT COUNT(*) AS order_count\nFROM orders o\nJOIN order_lines l\n  ON o.order_id = l.order_id;` },
+          intro: 'A manager wants an order count. Check what happens when the report joins each order to its item lines before counting.',
+          a: { label: 'Count after joining', sql: `SELECT COUNT(*) AS order_count\nFROM orders\nJOIN order_lines\n  ON orders.order_id = order_lines.order_id;` },
           b: { label: 'Count the right grain', sql: `SELECT COUNT(*) AS order_count\nFROM orders;` },
-          diff: 'Joining one order to its many lines repeats the order once per line. The left number counts lines. This is called fan-out, and it inflates any SUM or COUNT taken from the "one" side.',
-          use: ['After any join, ask: what does one row mean now?', 'Need header counts after a join → COUNT(DISTINCT o.order_id)', 'Compare row counts before and after the join when a total looks too high'] },
+          diff: 'O1001 has two order lines, so it appears twice in the joined result. COUNT(*) counts both rows. The join returns eleven matching lines in total. Counting directly from orders answers how many orders there are: six.',
+          use: ['After any join, ask: what does one row mean now?', 'Need header counts after a join → COUNT(DISTINCT orders.order_id)', 'Compare row counts before and after the join when a total looks too high'] },
         { t: 'compare', h: 'Join on the whole key, not part of it',
-          intro: 'Stock on hand for the six Nov 4 plan rows. Inventory is kept per date, location and product.',
-          a: { label: 'Product only', sql: `SELECT d.plan_id, d.location_id,\n       i.location_id AS inv_loc, i.on_hand\nFROM daily_plan d\nJOIN inventory i\n  ON d.product_id = i.product_id\nWHERE d.plan_date = '2026-11-04'\nORDER BY d.plan_id;` },
-          b: { label: 'Date + location + product', sql: `SELECT d.plan_id, d.location_id,\n       i.location_id AS inv_loc, i.on_hand\nFROM daily_plan d\nLEFT JOIN inventory i\n  ON d.plan_date   = i.snapshot_date\n AND d.location_id = i.location_id\n AND d.product_id  = i.product_id\nWHERE d.plan_date = '2026-11-04'\nORDER BY d.plan_id;` },
-          diff: 'Matching on product alone pairs Chicago plans with Denver stock, and six rows become ten. With the full key each plan row appears once, and plan 24 honestly shows no stock record.',
-          use: ['Read the grain of both tables; the ON clause needs every column they share in their keys', 'More rows than you started with → the key is incomplete or not unique'] },
-        { t: 'compare', h: 'JOIN makes the result wider. UNION makes it taller.',
-          intro: 'Stacking the products from two orders.',
-          a: { label: 'UNION ALL keeps everything', sql: `SELECT product_id FROM order_lines\nWHERE order_id = 'O1001'\nUNION ALL\nSELECT product_id FROM order_lines\nWHERE order_id = 'O1002';` },
-          b: { label: 'UNION removes duplicates', sql: `SELECT product_id FROM order_lines\nWHERE order_id = 'O1001'\nUNION\nSELECT product_id FROM order_lines\nWHERE order_id = 'O1002';` },
-          diff: 'Both stack rows; neither matches on a key. UNION quietly removed the repeated P03, which could be hiding a real duplicate.',
-          use: ['Add columns from a related table → JOIN', 'Append rows with the same columns (two months, two systems) → UNION ALL', 'Use plain UNION only when you intend to de-duplicate'] },
+          intro: 'Find stock for the six Nov 4 plan rows. Both tables refer to products by product ID. A stock record belongs to one product, at one location, on one date.',
+          a: { label: 'Product only', sql: `SELECT daily_plan.plan_id, daily_plan.location_id,\n       inventory.location_id AS inventory_location, inventory.on_hand\nFROM daily_plan\nLEFT JOIN inventory\n  ON daily_plan.product_id = inventory.product_id\nWHERE daily_plan.plan_date = '2026-11-04'\nORDER BY daily_plan.plan_id;` },
+          b: { label: 'Date + location + product', sql: `SELECT daily_plan.plan_id, daily_plan.location_id,\n       inventory.location_id AS inventory_location, inventory.on_hand\nFROM daily_plan\nLEFT JOIN inventory\n  ON daily_plan.plan_date   = inventory.snapshot_date\n AND daily_plan.location_id = inventory.location_id\n AND daily_plan.product_id  = inventory.product_id\nWHERE daily_plan.plan_date = '2026-11-04'\nORDER BY daily_plan.plan_id;` },
+          diff: 'Both examples use LEFT JOIN. With product alone, plan 19 matches 80 units in Chicago and 120 in Denver. Adding location and date keeps the Chicago result. Plan 24 still appears, with NULL for stock, because it has no inventory row for that combination.',
+          use: ['Name what one row represents in each table, then compare the fields that identify the record you need', 'More rows than expected → check whether a row has several matches and whether those matches are intended'] },
+        { t: 'compare', h: 'JOIN and UNION on the same two tables',
+          intro: 'Use order O1004 from orders and screen_orders. First put the two statuses on one row, then stack them in a list.',
+          a: { label: 'JOIN puts statuses side by side', sql: `SELECT orders.order_id,\n       orders.status AS source_status,\n       screen_orders.status AS screen_status\nFROM orders\nJOIN screen_orders\n  ON orders.order_id = screen_orders.order_id\nWHERE orders.order_id = 'O1004';` },
+          b: { label: 'UNION ALL stacks both statuses', sql: `SELECT order_id, status\nFROM orders\nWHERE order_id = 'O1004'\nUNION ALL\nSELECT order_id, status\nFROM screen_orders\nWHERE order_id = 'O1004';` },
+          diff: 'JOIN uses the order ID to pair the records and shows Shipped and Open in two columns on one row. UNION ALL appends the rows into one list with a single status column. Each input supplies the same two columns in the same order.',
+          use: ['Compare values from related rows side by side → JOIN', 'Combine two lists and keep every row → UNION ALL', 'Use UNION to remove exact duplicate result rows. Both statuses here would stay because the status values differ.'] },
         { t: 'text', h: 'The other joins, in one line each', key: "Four more join types and how to chain three tables.", html: `
 <ul><li><code>RIGHT JOIN</code>: LEFT JOIN with the tables swapped. Most people rewrite it as a LEFT JOIN.</li>
 <li><code>FULL OUTER JOIN</code>: keep unmatched rows from both sides. Used to reconcile two systems (lesson 6).</li>
 <li><code>CROSS JOIN</code>: every row with every row. Rarely intended.</li>
 <li>Three tables: add a second JOIN. Each JOIN has its own ON.</li></ul>
-<pre class="code">SELECT o.order_id, loc.location_name, p.product_name, l.qty_ordered
-FROM orders o
-JOIN order_lines l ON l.order_id   = o.order_id
-JOIN locations loc ON loc.location_id = o.location_id
-LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
+<pre class="code">SELECT orders.order_id, locations.location_name, products.product_name, order_lines.qty_ordered
+FROM orders
+JOIN order_lines ON order_lines.order_id   = orders.order_id
+JOIN locations ON locations.location_id = orders.location_id
+LEFT JOIN products ON products.product_id = order_lines.product_id;</pre>` },
         { t: 'try', id: 'join-names', title: 'Add product names to an order',
-          prompt: "Return line_id, product_name and qty_ordered for order O1001. Use an INNER JOIN between order_lines and products. Sort by line_id.",
-          starter: `SELECT l.line_id, p.product_name, l.qty_ordered\nFROM order_lines l\n`,
-          solution: `SELECT l.line_id, p.product_name, l.qty_ordered\nFROM order_lines l\nINNER JOIN products p\n  ON l.product_id = p.product_id\nWHERE l.order_id = 'O1001'\nORDER BY l.line_id;`, ordered: true,
-          hints: ['JOIN products p ON l.product_id = p.product_id', "Then WHERE l.order_id = 'O1001'", 'ORDER BY l.line_id'],
+          prompt: "Customer support needs a readable list of items for order O1001.\n\nMatch order_lines to products on product_id with INNER JOIN. Return line_id, product_name, and qty_ordered for O1001. Sort by line_id.",
+          starter: `SELECT order_lines.line_id, products.product_name, order_lines.qty_ordered\nFROM order_lines\n`,
+          solution: `SELECT order_lines.line_id, products.product_name, order_lines.qty_ordered\nFROM order_lines\nINNER JOIN products\n  ON order_lines.product_id = products.product_id\nWHERE order_lines.order_id = 'O1001'\nORDER BY order_lines.line_id;`, ordered: true,
+          hints: ['JOIN products ON order_lines.product_id = products.product_id', "Then WHERE order_lines.order_id = 'O1001'", 'ORDER BY order_lines.line_id'],
           explain: 'Both lines have a valid product, so INNER and LEFT give the same answer here. That is worth checking rather than assuming.' },
         { t: 'try', id: 'join-orphan', title: 'Lines with no order header',
-          prompt: 'Find order_lines whose order_id does not exist in orders. Return line_id and order_id.',
-          starter: `SELECT l.line_id, l.order_id\nFROM order_lines l\nLEFT JOIN orders o\n  ON \nWHERE `,
-          solution: `SELECT l.line_id, l.order_id\nFROM order_lines l\nLEFT JOIN orders o\n  ON l.order_id = o.order_id\nWHERE o.order_id IS NULL;`,
-          hints: ['Keep every line with LEFT JOIN, then keep the ones where the order side is empty.', 'ON l.order_id = o.order_id', 'WHERE o.order_id IS NULL'],
+          prompt: "A data-quality check needs to flag order lines that arrived without a matching order header.\n\nReturn line_id and order_id from order_lines when that order_id has no match in orders.",
+          starter: `SELECT order_lines.line_id, order_lines.order_id\nFROM order_lines\nLEFT JOIN orders\n  ON \nWHERE `,
+          solution: `SELECT order_lines.line_id, order_lines.order_id\nFROM order_lines\nLEFT JOIN orders\n  ON order_lines.order_id = orders.order_id\nWHERE orders.order_id IS NULL;`,
+          hints: ['Keep every line with LEFT JOIN, then keep the ones where the order side is empty.', 'ON order_lines.order_id = orders.order_id', 'WHERE orders.order_id IS NULL'],
           explain: 'Line 11 belongs to O1007, which has no header. An INNER JOIN report would never show this line, and nobody would know it was missing.' },
         { t: 'try', id: 'join-three', title: 'Units ordered per distribution center',
-          prompt: "Return location_name and total_ordered (sum of qty_ordered) for each location that has orders. Join orders to order_lines and to locations. Exclude orders whose status is Cancelled. Sort by location_name.",
-          starter: `SELECT loc.location_name,\n       SUM(l.qty_ordered) AS total_ordered\nFROM orders o\n`,
-          solution: `SELECT loc.location_name,\n       SUM(l.qty_ordered) AS total_ordered\nFROM orders o\nJOIN order_lines l ON l.order_id = o.order_id\nJOIN locations loc ON loc.location_id = o.location_id\nWHERE o.status <> 'Cancelled'\nGROUP BY loc.location_name\nORDER BY loc.location_name;`, ordered: true,
-          hints: ['Two JOINs, each with its own ON.', "WHERE o.status <> 'Cancelled' goes before GROUP BY.", 'GROUP BY loc.location_name'],
+          prompt: "Distribution managers want to compare ordered volume across centers.\n\nUse orders, order_lines, and locations. Exclude Cancelled orders. Return one row per center with qualifying lines, showing location_name and total_ordered (the sum of qty_ordered). Sort by location_name.",
+          starter: `SELECT locations.location_name,\n       SUM(order_lines.qty_ordered) AS total_ordered\nFROM orders\n`,
+          solution: `SELECT locations.location_name,\n       SUM(order_lines.qty_ordered) AS total_ordered\nFROM orders\nJOIN order_lines ON order_lines.order_id = orders.order_id\nJOIN locations ON locations.location_id = orders.location_id\nWHERE orders.status <> 'Cancelled'\nGROUP BY locations.location_name\nORDER BY locations.location_name;`, ordered: true,
+          hints: ['Two JOINs, each with its own ON.', "WHERE orders.status <> 'Cancelled' goes before GROUP BY.", 'GROUP BY locations.location_name'],
           explain: 'Join, filter rows, then group: the run order from lesson 1. Chicago includes the duplicated O1002 line, which lesson 6 deals with.' },
         { t: 'quiz', q: 'A LEFT JOIN from orders to screen_orders returns fewer rows than orders has. What is the most likely cause?',
           options: ['LEFT JOIN always drops unmatched rows', 'A WHERE condition on a screen_orders column removed the unmatched rows', 'The tables have different numbers of columns'], correct: 1,
@@ -1006,13 +1030,13 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
     /* ------------------------------------------------------------------ 5 */
     {
       id: 'functions', title: 'Functions: NULL, CASE, text, dates and maths', mins: 30, priority: 'Must',
-      builds: 'You can get the right rows from the right tables. Functions clean and reshape the values in them.',
+      builds: 'Start with individual order lines. Calculate what is left to ship, label each line, and work out a fill rate. Then clean a product code and measure how late a receipt arrived.',
       outcome: 'Handle missing values, label rows with CASE, clean a text key, do date arithmetic and avoid the integer-division trap, in SQL Server syntax.',
       core: [["ISNULL, COALESCE", "Replace a missing value.", "Any calculation with NULL returns NULL."], ["CASE WHEN", "Labels or calculates by condition.", "The first true WHEN wins. Test for NULL first."], ["SUM(CASE …)", "Counts or totals by category, in columns.", "The SQL version of COUNTIFS. Asked often."], ["1.0 *, NULLIF", "Force a decimal result. Avoid dividing by zero.", "Whole number ÷ whole number drops the decimals."], ["TRIM, UPPER, LEN, CONCAT", "Clean and inspect text.", "A hidden space is enough to break a join."], ["DATEDIFF, DATEADD, GETDATE", "Gap between dates, shift a date, now.", "SQL Server spelling; other databases differ."], ["CAST, ROUND", "Change a type. Round a number.", "CAST(x AS DATE) removes the time."]],
       tip: "Name the function and what it protects against: \"ISNULL here, so unshipped lines count as zero.\"",
       steps: [
         { t: 'compare', h: 'Any calculation with NULL returns NULL',
-          intro: 'Units still to ship on order O1003 and O1004.',
+          intro: 'Fulfillment wants the units left to ship for each line on orders O1003 and O1004. Decide what a missing shipped quantity means for that report.',
           a: { label: 'Raw subtraction', sql: `SELECT line_id, qty_ordered, qty_shipped,\n       qty_ordered - qty_shipped\n         AS still_to_ship\nFROM order_lines\nWHERE order_id IN ('O1003','O1004');` },
           b: { label: 'With ISNULL', sql: `SELECT line_id, qty_ordered, qty_shipped,\n       qty_ordered - ISNULL(qty_shipped, 0)\n         AS still_to_ship\nFROM order_lines\nWHERE order_id IN ('O1003','O1004');` },
           diff: '30 minus unknown is unknown, so the unshipped lines show NULL instead of 30 and 20. ISNULL(x, 0) substitutes a value when x is missing.',
@@ -1022,7 +1046,7 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
         { t: 'run', h: 'CASE inside SUM: several counts in one row', key: "Turn each row into 1 or 0, then add them up.", sql: `SELECT location_id,\n       COUNT(*) AS orders,\n       SUM(CASE WHEN status = 'Open'    THEN 1 ELSE 0 END) AS open_orders,\n       SUM(CASE WHEN status = 'Shipped' THEN 1 ELSE 0 END) AS shipped_orders\nFROM orders\nGROUP BY location_id\nORDER BY location_id;`,
           note: `Each CASE turns a row into 1 or 0 and SUM adds them. This is COUNTIFS, and it is how you put categories into columns without a pivot. It comes up in interviews often.` },
         { t: 'compare', h: 'Whole number ÷ whole number = whole number',
-          intro: 'Fill rate (shipped ÷ ordered) for order O1004.',
+          intro: 'A fulfillment report needs O1004’s shipped quantity divided by ordered quantity for each line. Check whether the calculation preserves a fraction such as 0.9.',
           a: { label: 'Integer division', sql: `SELECT line_id, qty_shipped, qty_ordered,\n       qty_shipped / qty_ordered\n         AS fill_rate\nFROM order_lines\nWHERE order_id = 'O1004';` },
           b: { label: 'Multiply by 100.0 first', sql: `SELECT line_id, qty_shipped, qty_ordered,\n       ROUND(100.0 * qty_shipped\n             / qty_ordered, 1)\n         AS fill_pct\nFROM order_lines\nWHERE order_id = 'O1004';` },
           diff: '45 / 50 between two integer columns gives 0, because SQL Server discards the remainder. Putting a decimal number into the calculation (100.0 or 1.0) makes the result decimal.',
@@ -1030,27 +1054,27 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
         { t: 'run', h: 'Text functions, shown on a dirty key', key: "Brackets and LEN make hidden spaces visible. TRIM and UPPER fix them.", sql: `SELECT raw_product_id,\n       CONCAT('[', raw_product_id, ']')  AS shown_in_brackets,\n       LEN(raw_product_id)               AS length,\n       UPPER(TRIM(raw_product_id))       AS clean_id\nFROM product_feed;`,
           note: `<code>TRIM</code> removes spaces from both ends (<code>LTRIM</code>/<code>RTRIM</code> for one end). <code>UPPER</code>/<code>LOWER</code> change case. <code>LEN</code> counts characters. <code>CONCAT</code> glues text together; wrapping a value in brackets makes hidden spaces visible. Also: <code>LEFT(x, 3)</code>, <code>RIGHT(x, 2)</code>, <code>SUBSTRING(x, start, length)</code>, <code>REPLACE(x, 'old', 'new')</code>. One SQL Server quirk: its LEN ignores trailing spaces.` },
         { t: 'compare', h: 'Clean the key before you join on it',
-          intro: 'How many of the 7 feed rows find their product?',
-          a: { label: 'Raw key', sql: `SELECT COUNT(*) AS matched\nFROM product_feed f\nJOIN products p\n  ON f.raw_product_id = p.product_id;` },
-          b: { label: 'Cleaned key', sql: `SELECT COUNT(*) AS matched\nFROM product_feed f\nJOIN products p\n  ON UPPER(TRIM(f.raw_product_id))\n     = p.product_id;` },
+          intro: 'Before loading the product feed, count how many of its seven rows match the product catalog before and after cleaning the code.',
+          a: { label: 'Raw key', sql: `SELECT COUNT(*) AS matched\nFROM product_feed\nJOIN products\n  ON product_feed.raw_product_id = products.product_id;` },
+          b: { label: 'Cleaned key', sql: `SELECT COUNT(*) AS matched\nFROM product_feed\nJOIN products\n  ON UPPER(TRIM(product_feed.raw_product_id))\n     = products.product_id;` },
           diff: 'Spaces and lower case stop four rows from matching. Nothing errors; the rows are simply absent.',
           use: ['Keys arriving from another system or a file → compare the cleaned version', 'SQL Server by default ignores case and trailing spaces when comparing text, so there only the leading spaces would break. Other systems in the chain may be stricter, which is how the same key matches in one place and fails in another'] },
         { t: 'run', h: 'Date functions', key: "DATEDIFF measures a gap. DATEADD moves a date. GETDATE is now.", sql: `SELECT receipt_id, expected_date, received_date,\n       DATEDIFF(day, expected_date, received_date) AS days_late,\n       DATEADD(day, 2, expected_date)              AS chase_on,\n       DATEDIFF(day, expected_date, GETDATE())     AS days_since_expected\nFROM receipts\nORDER BY receipt_id;`,
           note: `<code>DATEDIFF(day, start, end)</code> is end minus start in days; swap <code>day</code> for <code>month</code>, <code>hour</code> and so on. <code>DATEADD(day, 2, d)</code> adds two days. <code>GETDATE()</code> is now (fixed at 2026-11-05 in this practice database). <code>YEAR(d)</code>, <code>MONTH(d)</code>, <code>DAY(d)</code> pull out parts. <code>CAST(synced_at AS DATE)</code> drops the time. A NULL date in gives NULL out.` },
         { t: 'try', id: 'fn-case', title: 'Label every order line',
-          prompt: "Return line_id and line_status for every order line: 'Not shipped' when qty_shipped is NULL, 'Short' when qty_shipped is less than qty_ordered, otherwise 'Complete'. Sort by line_id.",
+          prompt: "The shipping team wants a status column for every order line.\n\nReturn line_id and line_status. Use Not shipped for a missing qty_shipped, Short when qty_shipped is below qty_ordered, and Complete otherwise. Sort by line_id.",
           starter: `SELECT line_id,\n       CASE\n         \n       END AS line_status\nFROM order_lines\nORDER BY line_id;`,
           solution: `SELECT line_id,\n       CASE\n         WHEN qty_shipped IS NULL THEN 'Not shipped'\n         WHEN qty_shipped < qty_ordered THEN 'Short'\n         ELSE 'Complete'\n       END AS line_status\nFROM order_lines\nORDER BY line_id;`, ordered: true,
           hints: ['Three branches: two WHEN lines and an ELSE.', 'Test for NULL first.', "WHEN qty_shipped IS NULL THEN 'Not shipped'"],
           explain: 'Order of the WHEN lines is the logic. NULL first, then the comparison, then everything else.' },
         { t: 'try', id: 'fn-fill', title: 'Fill rate per order',
-          prompt: 'For lines that have a shipped quantity (not NULL), return order_id and fill_pct = 100 × total shipped ÷ total ordered, rounded to 1 decimal place, per order. Sort by order_id.',
+          prompt: "A fulfillment report needs the fill rate for each order with a recorded shipped quantity.\n\nKeep order_lines where qty_shipped is present, including recorded zeros. Per order, calculate 100 × total shipped ÷ total ordered. Return order_id and fill_pct rounded to one decimal place, sorted by order_id.",
           starter: `SELECT order_id,\n       \nFROM order_lines\n`,
           solution: `SELECT order_id,\n       ROUND(100.0 * SUM(qty_shipped) / SUM(qty_ordered), 1) AS fill_pct\nFROM order_lines\nWHERE qty_shipped IS NOT NULL\nGROUP BY order_id\nORDER BY order_id;`, ordered: true,
           hints: ['Filter out NULL shipped quantities in WHERE.', 'Sum first, then divide: 100.0 * SUM(qty_shipped) / SUM(qty_ordered)', 'Wrap it in ROUND(…, 1) and GROUP BY order_id.'],
           explain: 'Dividing the two totals gives the order-level rate. Averaging the line percentages would weight a 10-unit line the same as a 50-unit line.' },
         { t: 'try', id: 'fn-late', title: 'Late receipts',
-          prompt: 'From receipts, return receipt_id and days_late for receipts that have a received_date later than expected_date. Sort by receipt_id.',
+          prompt: "A supplier review needs a list of deliveries that arrived late.\n\nFrom receipts, keep rows where received_date is later than expected_date. Return receipt_id and days_late (days between expected and received dates). Sort by receipt_id.",
           starter: `SELECT receipt_id,\n       DATEDIFF(day, , ) AS days_late\nFROM receipts\n`,
           solution: `SELECT receipt_id,\n       DATEDIFF(day, expected_date, received_date) AS days_late\nFROM receipts\nWHERE received_date > expected_date\nORDER BY receipt_id;`, ordered: true,
           hints: ['DATEDIFF(day, earlier, later)', 'WHERE received_date > expected_date', 'Rows with a NULL received_date fail that test on their own, which is what you want here.'],
@@ -1063,7 +1087,7 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
     /* ------------------------------------------------------------------ 6 */
     {
       id: 'trace', title: 'Trace a wrong number on the screen', mins: 35, priority: 'Must',
-      builds: 'Every earlier lesson was a tool. This is the job: use them in order to find where data went wrong.',
+      builds: 'Start with a number the ordering screen shows. Bring the source to the same level of detail, reproduce the discrepancy, and test a proposed fix against both the failing case and cases that were already right.',
       outcome: 'Reconcile a screen against its source, name the five usual causes of a mismatch, and prove which one you are looking at.',
       core: [["Reconcile", "Put source and copy side by side, per key.", "Shows which records differ and in which direction."], ["Duplicate check", "GROUP BY the key, HAVING COUNT(*) > 1.", "Finds the cause of a number that is too high."], ["Dropped rows", "An INNER JOIN or WHERE lost records.", "Cause of a number that is too low. Reproduce the wrong value to prove it."], ["Dirty key", "Spaces or case stop a match.", "Looks identical on screen. Brackets and LEN expose it."], ["Stale copy", "The sync time is older than the change.", "Source is right, screen is behind."], ["Missing on one side", "LEFT JOIN + IS NULL, run both ways.", "A record never arrived, or exists with nothing behind it."], ["ROW_NUMBER", "Numbers rows inside each key.", "Keep one row per key, or list the extras."]],
       tip: "Give every finding in four parts: evidence, cause, impact, next action.",
@@ -1076,66 +1100,66 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
 <li><strong>Freshness.</strong> Is the copy old? (Status or quantity out of date.)</li>
 <li><strong>Completeness.</strong> Does a record exist on one side only? (Missing from the screen, or on the screen with no source.)</li></ol>
 <p>Then report: what you compared, what differs, the cause, how many records it affects, and the next action.</p>` },
-        { t: 'run', h: 'Step 1: source beside screen', key: "Total the source to the same grain as the screen, then put them side by side.", sql: `WITH src AS (\n  SELECT order_id, SUM(qty_ordered) AS source_qty\n  FROM order_lines\n  GROUP BY order_id\n)\nSELECT o.order_id,\n       o.status     AS source_status,\n       s.status     AS screen_status,\n       src.source_qty,\n       s.total_qty  AS screen_qty\nFROM orders o\nLEFT JOIN src             ON src.order_id = o.order_id\nLEFT JOIN screen_orders s ON s.order_id   = o.order_id\nORDER BY o.order_id;`,
-          note: `<code>WITH src AS (…)</code> names a sub-result so the main query stays readable (more in chapter 10). The lines are totalled to order grain <em>before</em> joining, so nothing fans out. Read the output: O1004 disagrees on status, O1005 on quantity, O1006 is not on the screen at all. O1002 agrees, and the store still says it is wrong. Each one is a different cause.` },
+        { t: 'run', h: 'Step 1: source beside screen', key: "Total the source to the same grain as the screen, then put them side by side.", sql: `WITH source_totals AS (\n  SELECT order_id, SUM(qty_ordered) AS source_qty\n  FROM order_lines\n  GROUP BY order_id\n)\nSELECT orders.order_id,\n       orders.status     AS source_status,\n       screen_orders.status     AS screen_status,\n       source_totals.source_qty,\n       screen_orders.total_qty  AS screen_qty\nFROM orders\nLEFT JOIN source_totals             ON source_totals.order_id = orders.order_id\nLEFT JOIN screen_orders ON screen_orders.order_id   = orders.order_id\nORDER BY orders.order_id;`,
+          note: `<code>WITH source_totals AS (…)</code> names a sub-result so the main query stays readable (more in chapter 10). The lines are totalled to order grain <em>before</em> joining, so nothing fans out. Read the output: O1004 disagrees on status, O1005 on quantity, O1006 is not on the screen at all. O1002 agrees, and the store still says it is wrong. Each one is a different cause.` },
         { t: 'compare', h: 'Too high: find the duplicate, do not hide it',
-          intro: 'O1002 shows 200 units. The store ordered 100.',
+          intro: 'The store says it ordered 100 units on O1002. The screen shows 200. Check whether the source lines contain the same product and quantity twice.',
           a: { label: 'DISTINCT hides it', sql: `SELECT DISTINCT order_id, product_id,\n       qty_ordered\nFROM order_lines\nWHERE order_id = 'O1002';` },
           b: { label: 'GROUP BY + HAVING finds it', sql: `SELECT order_id, product_id,\n       COUNT(*) AS copies\nFROM order_lines\nGROUP BY order_id, product_id\nHAVING COUNT(*) > 1;` },
           diff: 'The same line was loaded twice at the source, so source and screen agree with each other and are both wrong. DISTINCT makes the output look right and leaves the bad row in the table. The duplicate check names the exact key that repeats.',
           use: ['Duplicate check: GROUP BY the columns that should be unique, HAVING COUNT(*) > 1', 'When source and screen match but the user disagrees, the error is upstream of both', 'Reach for DISTINCT only after you know why rows repeat'] },
         { t: 'compare', h: 'Too low: a join dropped a row',
           intro: 'O1005 shows 25 units on the screen. The source lines add up to 105. Suppose the sync job joins lines to products.',
-          a: { label: 'What the sync does (INNER)', sql: `SELECT l.order_id,\n       SUM(l.qty_ordered) AS total_qty\nFROM order_lines l\nJOIN products p\n  ON l.product_id = p.product_id\nWHERE l.order_id = 'O1005'\nGROUP BY l.order_id;` },
-          b: { label: 'Keep every line (LEFT)', sql: `SELECT l.order_id,\n       SUM(l.qty_ordered) AS total_qty\nFROM order_lines l\nLEFT JOIN products p\n  ON l.product_id = p.product_id\nWHERE l.order_id = 'O1005'\nGROUP BY l.order_id;` },
-          diff: 'The INNER JOIN reproduces the screen value exactly, which is strong evidence that this is where 80 units disappear. One line does not match a product.',
-          use: ['Reproduce the wrong number with a query; when your query returns the same wrong value, you have found the step that causes it', 'Number too low → suspect INNER JOIN or a WHERE filter', 'Number too high → suspect duplicates or fan-out'] },
+          a: { label: 'What the sync does (INNER)', sql: `SELECT order_lines.order_id,\n       SUM(order_lines.qty_ordered) AS total_qty\nFROM order_lines\nJOIN products\n  ON order_lines.product_id = products.product_id\nWHERE order_lines.order_id = 'O1005'\nGROUP BY order_lines.order_id;` },
+          b: { label: 'Keep every line (LEFT)', sql: `SELECT order_lines.order_id,\n       SUM(order_lines.qty_ordered) AS total_qty\nFROM order_lines\nLEFT JOIN products\n  ON order_lines.product_id = products.product_id\nWHERE order_lines.order_id = 'O1005'\nGROUP BY order_lines.order_id;` },
+          diff: 'The INNER JOIN drops one line worth 80 units and reproduces the screen value. That makes a dropped match a plausible cause. Check the actual sync query or load logs to confirm.',
+          use: ['Reproduce the wrong number, then verify whether the actual process applies the same join or filter', 'Number too low → suspect INNER JOIN or a WHERE filter', 'Number too high → suspect duplicates or fan-out'] },
         { t: 'run', h: 'Why that line does not match', key: "The product code has a leading space: four characters, not three.", sql: `SELECT line_id,\n       CONCAT('[', product_id, ']') AS key_in_brackets,\n       LEN(product_id)              AS key_length\nFROM order_lines\nWHERE order_id = 'O1005';`,
           note: `Line 9 holds <code>' P02'</code> with a leading space: four characters, not three. On screen it looks identical to P02. Brackets and LEN expose it. The fix belongs where the value is entered or loaded; your query can prove it with <code>TRIM(product_id)</code>.` },
         { t: 'run', h: 'Out of date: check when the copy was refreshed', key: "The data is right at the source. The copy is three days old.", sql: `SELECT order_id, status, synced_at,\n       DATEDIFF(day, synced_at, GETDATE()) AS days_since_sync\nFROM screen_orders\nWHERE synced_at < (SELECT MAX(synced_at) FROM screen_orders)\nORDER BY synced_at;`,
-          note: `The inner query finds the latest sync time; the outer one lists rows older than it. O1004 was last refreshed on Nov 2, before it shipped, so the screen still says Open. The data is not wrong, it is stale. That points at the sync job for that order, not at the order tables.` },
+          note: `The inner query finds the latest sync time; the outer one lists rows older than it. O1004 was last refreshed on Nov 2, earlier than the other rows. That supports the stale-copy explanation. Check the shipment timestamp and sync history to confirm.` },
         { t: 'compare', h: 'Missing on one side: check both directions',
-          intro: 'A record can exist in the source and not on the screen, or the reverse.',
-          a: { label: 'In source, not on screen', sql: `SELECT o.order_id, o.status\nFROM orders o\nLEFT JOIN screen_orders s\n  ON s.order_id = o.order_id\nWHERE s.order_id IS NULL;` },
-          b: { label: 'On screen, not in source', sql: `SELECT s.order_id, s.status\nFROM screen_orders s\nLEFT JOIN orders o\n  ON o.order_id = s.order_id\nWHERE o.order_id IS NULL;` },
+          intro: 'Support needs two exception lists: orders missing from the screen, and screen records missing an order header.',
+          a: { label: 'In source, not on screen', sql: `SELECT orders.order_id, orders.status\nFROM orders\nLEFT JOIN screen_orders\n  ON screen_orders.order_id = orders.order_id\nWHERE screen_orders.order_id IS NULL;` },
+          b: { label: 'On screen, not in source', sql: `SELECT screen_orders.order_id, screen_orders.status\nFROM screen_orders\nLEFT JOIN orders\n  ON orders.order_id = screen_orders.order_id\nWHERE orders.order_id IS NULL;` },
           diff: 'Same pattern, tables swapped, different findings. O1006 never reached the screen. O1007 is on the screen with no order header behind it.',
-          use: ['Always run the check both ways; one direction alone misses half the problems', 'FULL OUTER JOIN … WHERE a.key IS NULL OR b.key IS NULL does both in one query', 'Ask whether a missing row is intended (for example, cancelled orders hidden on purpose) before calling it a defect'] },
+          use: ['Always run the check both ways; one direction alone misses half the problems', 'FULL OUTER JOIN … WHERE average_line.key IS NULL OR b.key IS NULL does both in one query', 'Ask whether a missing row is intended (for example, cancelled orders hidden on purpose) before calling it a defect'] },
         { t: 'compare', h: 'A duplicate in a lookup table doubles your total',
-          intro: 'Units ordered of P02. The product feed lists P02 twice.',
+          intro: 'A planner asks for the units ordered for P02. Compare a direct total with the total after attaching feed records. The feed has two rows for P02.',
           a: { label: 'Lines only', sql: `SELECT SUM(qty_ordered) AS p02_units\nFROM order_lines\nWHERE product_id = 'P02';` },
-          b: { label: 'Joined to the feed', sql: `SELECT SUM(l.qty_ordered) AS p02_units\nFROM order_lines l\nJOIN product_feed f\n  ON l.product_id = f.raw_product_id\nWHERE l.product_id = 'P02';` },
+          b: { label: 'Joined to the feed', sql: `SELECT SUM(order_lines.qty_ordered) AS p02_units\nFROM order_lines\nJOIN product_feed\n  ON order_lines.product_id = product_feed.raw_product_id\nWHERE order_lines.product_id = 'P02';` },
           diff: 'Each order line matched two feed rows, so every quantity was added twice. The order data is fine; the lookup table is not unique on its key.',
           use: ['Before joining to a lookup table, run the duplicate check on its key', 'A total that is exactly double, or grows after adding a join, is fan-out'] },
         { t: 'run', h: 'Keep one row per key with ROW_NUMBER', key: "Number the rows inside each key. Row 1 is the keeper, the rest are extras.", sql: `WITH ranked AS (\n  SELECT line_id, order_id, product_id, qty_ordered,\n         ROW_NUMBER() OVER (\n           PARTITION BY order_id, product_id\n           ORDER BY line_id\n         ) AS rn\n  FROM order_lines\n)\nSELECT line_id, order_id, product_id, qty_ordered, rn\nFROM ranked\nWHERE order_id = 'O1002';`,
           note: `<code>ROW_NUMBER()</code> numbers the rows inside each group (<code>PARTITION BY</code>) in the order you give. Duplicates get 1, 2, 3. Filtering to <code>rn = 1</code> keeps one row per key; <code>rn &gt; 1</code> lists the extras. It is the standard SQL Server way to de-duplicate or to pick the latest record per key (order by a date, descending).` },
         { t: 'try', id: 'trace-dupes', title: 'Duplicate keys in the product feed',
-          prompt: 'From product_feed, return clean_id (the raw_product_id trimmed and upper-cased) and row_count for cleaned IDs that occur more than once.',
+          prompt: "Before loading a product feed, check whether two rows would point to the same product after cleanup.\n\nFrom product_feed, trim spaces and uppercase raw_product_id. Return clean_id and row_count for cleaned IDs that occur more than once.",
           starter: `SELECT UPPER(TRIM(raw_product_id)) AS clean_id,\n       COUNT(*) AS row_count\nFROM product_feed\n`,
           solution: `SELECT UPPER(TRIM(raw_product_id)) AS clean_id,\n       COUNT(*) AS row_count\nFROM product_feed\nGROUP BY UPPER(TRIM(raw_product_id))\nHAVING COUNT(*) > 1;`,
           hints: ['Group by the cleaned expression, not the raw column.', 'GROUP BY UPPER(TRIM(raw_product_id))', 'HAVING COUNT(*) > 1'],
           explain: 'On SQL Server you repeat the expression in GROUP BY; the alias is not available there. Clean first, then count, or " p01 " and "P01" would look like two different keys.' },
         { t: 'try', id: 'trace-recon', title: 'Orders where the screen quantity is wrong',
-          prompt: 'Return order_id, source_qty (sum of qty_ordered from order_lines) and screen_qty (total_qty from screen_orders) for orders on the screen whose two quantities differ.',
-          starter: `WITH src AS (\n  SELECT order_id, SUM(qty_ordered) AS source_qty\n  FROM order_lines\n  GROUP BY order_id\n)\nSELECT s.order_id, src.source_qty, s.total_qty AS screen_qty\nFROM screen_orders s\n`,
-          solution: `WITH src AS (\n  SELECT order_id, SUM(qty_ordered) AS source_qty\n  FROM order_lines\n  GROUP BY order_id\n)\nSELECT s.order_id, src.source_qty, s.total_qty AS screen_qty\nFROM screen_orders s\nJOIN src ON src.order_id = s.order_id\nWHERE src.source_qty <> s.total_qty;`,
-          hints: ['Join the screen rows to the src totals on order_id.', 'JOIN src ON src.order_id = s.order_id', 'WHERE src.source_qty <> s.total_qty'],
+          prompt: "A planner suspects the ordering screen is showing the wrong quantities.\n\nCompare only orders with both a source line total and a screen record. Return order_id, source_qty (the sum of qty_ordered in order_lines), and screen_qty (total_qty in screen_orders) where the totals differ.",
+          starter: `WITH source_totals AS (\n  SELECT order_id, SUM(qty_ordered) AS source_qty\n  FROM order_lines\n  GROUP BY order_id\n)\nSELECT screen_orders.order_id, source_totals.source_qty, screen_orders.total_qty AS screen_qty\nFROM screen_orders\n`,
+          solution: `WITH source_totals AS (\n  SELECT order_id, SUM(qty_ordered) AS source_qty\n  FROM order_lines\n  GROUP BY order_id\n)\nSELECT screen_orders.order_id, source_totals.source_qty, screen_orders.total_qty AS screen_qty\nFROM screen_orders\nJOIN source_totals ON source_totals.order_id = screen_orders.order_id\nWHERE source_totals.source_qty <> screen_orders.total_qty;`,
+          hints: ['Join the screen rows to the source_totals totals on order_id.', 'JOIN source_totals ON source_totals.order_id = screen_orders.order_id', 'WHERE source_totals.source_qty <> screen_orders.total_qty'],
           explain: 'Only O1005 differs. Totalling the lines inside the CTE first keeps one row per order on both sides of the join.' },
         { t: 'try', id: 'trace-missing', title: 'Orders the screen never received',
-          prompt: 'Return order_id and status for orders in orders that have no row in screen_orders.',
-          starter: `SELECT o.order_id, o.status\nFROM orders o\n`,
-          solution: `SELECT o.order_id, o.status\nFROM orders o\nLEFT JOIN screen_orders s\n  ON s.order_id = o.order_id\nWHERE s.order_id IS NULL;`,
-          hints: ['LEFT JOIN from the table you want to keep.', 'ON s.order_id = o.order_id', 'WHERE s.order_id IS NULL'],
+          prompt: "The support team needs the source orders it should investigate for missing screen records.\n\nReturn order_id and status from orders for each order with no matching order_id in screen_orders.",
+          starter: `SELECT orders.order_id, orders.status\nFROM orders\n`,
+          solution: `SELECT orders.order_id, orders.status\nFROM orders\nLEFT JOIN screen_orders\n  ON screen_orders.order_id = orders.order_id\nWHERE screen_orders.order_id IS NULL;`,
+          hints: ['LEFT JOIN from the table you want to keep.', 'ON screen_orders.order_id = orders.order_id', 'WHERE screen_orders.order_id IS NULL'],
           explain: 'O1006 is Cancelled. The next question is for a person, not a query: are cancelled orders meant to be hidden, or did the sync miss it?' },
         { t: 'try', id: 'trace-stale', title: 'Screen rows with the wrong status',
-          prompt: 'Return order_id, source_status (from orders) and screen_status (from screen_orders) for orders where the two statuses differ.',
-          starter: `SELECT o.order_id,\n       o.status AS source_status,\n       s.status AS screen_status\nFROM orders o\n`,
-          solution: `SELECT o.order_id,\n       o.status AS source_status,\n       s.status AS screen_status\nFROM orders o\nJOIN screen_orders s\n  ON s.order_id = o.order_id\nWHERE o.status <> s.status;`,
-          hints: ['Join the two tables on order_id.', 'Compare the two status columns in WHERE.', 'WHERE o.status <> s.status'],
+          prompt: "Support needs a list of status disagreements to investigate for a possible stale sync.\n\nMatch orders and screen_orders by order_id. Return order_id, source_status from orders, and screen_status from screen_orders where the two statuses differ.",
+          starter: `SELECT orders.order_id,\n       orders.status AS source_status,\n       screen_orders.status AS screen_status\nFROM orders\n`,
+          solution: `SELECT orders.order_id,\n       orders.status AS source_status,\n       screen_orders.status AS screen_status\nFROM orders\nJOIN screen_orders\n  ON screen_orders.order_id = orders.order_id\nWHERE orders.status <> screen_orders.status;`,
+          hints: ['Join the two tables on order_id.', 'Compare the two status columns in WHERE.', 'WHERE orders.status <> screen_orders.status'],
           explain: 'O1004 only. An INNER JOIN is right here because a status can only differ where both rows exist; the missing rows are a separate check.' },
         { t: 'compare', h: 'Test the fix before you call it fixed',
-          intro: 'Proposed fix for the dropped line: trim the product code in the sync join. Order totals for every order, before and after.',
-          a: { label: 'Current join', sql: `SELECT l.order_id,\n       SUM(l.qty_ordered) AS total_qty\nFROM order_lines l\nJOIN products p\n  ON l.product_id = p.product_id\nGROUP BY l.order_id\nORDER BY l.order_id;` },
-          b: { label: 'With the fix', sql: `SELECT l.order_id,\n       SUM(l.qty_ordered) AS total_qty\nFROM order_lines l\nJOIN products p\n  ON TRIM(l.product_id) = p.product_id\nGROUP BY l.order_id\nORDER BY l.order_id;` },
+          intro: 'You propose trimming product codes during the sync. Compare order totals before and after. Check the failing order and look for changes to other orders.',
+          a: { label: 'Current join', sql: `SELECT order_lines.order_id,\n       SUM(order_lines.qty_ordered) AS total_qty\nFROM order_lines\nJOIN products\n  ON order_lines.product_id = products.product_id\nGROUP BY order_lines.order_id\nORDER BY order_lines.order_id;` },
+          b: { label: 'With the fix', sql: `SELECT order_lines.order_id,\n       SUM(order_lines.qty_ordered) AS total_qty\nFROM order_lines\nJOIN products\n  ON TRIM(order_lines.product_id) = products.product_id\nGROUP BY order_lines.order_id\nORDER BY order_lines.order_id;` },
           diff: 'Exactly one row changes: O1005 goes from 25 to 105, which matches the source. Every other order is untouched, so the fix does what was intended and nothing else.',
           use: ['Write down the expected result before running the test', 'Test the failing case: does it now give the right answer?', 'Test the cases that were already right: did any of them change? (regression check)', 'Record what you ran and what came back, so someone else can repeat it', 'O1004 still shows 50, not 60: the unknown product P99 is a separate issue and stays on the list'] },
         { t: 'text', h: 'How to report a finding', key: "Evidence, cause, impact, next action.", html: `
@@ -1150,7 +1174,7 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
     /* ------------------------------------------------------------------ KPI */
     {
       id: 'kpi', title: 'Planning KPIs: forecast accuracy, cover and replenishment', mins: 25, priority: 'Must',
-      builds: 'The role is planning: forecasts go in, replenishment recommendations come out. This chapter turns the SQL you have into the numbers a planner asks for.',
+      builds: 'Compare forecast and actual sales to find where the plan missed. Then look at available stock, expected demand, and inbound receipts to decide which items need attention.',
       outcome: 'Calculate bias, WAPE, days of cover and a reorder list, say what each one means, and hand a clean extract to Excel.',
       core: [
         ["Forecast error", "actual − forecast, per row.", "Positive means under-forecast (sold more than planned). Say which way round you calculated it."],
@@ -1173,23 +1197,23 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
 </tbody></table></div>
 <p>When a planner says "the forecast looks wrong" or "why did the system not order?", the answer is nearly always in one of these four places. Chapters 4 to 6 gave you the checks for the first and last rows. This chapter covers the middle two.</p>` },
         { t: 'compare', h: 'Bias shows direction. WAPE shows size.',
-          intro: 'Forecast error by location, measured two ways on the same rows.',
+          intro: 'A planning lead wants to know which locations forecast consistently high or low and how large the misses were. Calculate both measures from the same rows with recorded actuals.',
           a: { label: 'Bias: errors keep their sign', sql: `SELECT location_id,\n       ROUND(100.0 * SUM(actual_units - forecast_units)\n             / SUM(actual_units), 2) AS error_pct\nFROM daily_plan\nWHERE actual_units IS NOT NULL\nGROUP BY location_id\nORDER BY location_id;` },
           b: { label: 'WAPE: errors made positive', sql: `SELECT location_id,\n       ROUND(100.0 * SUM(ABS(actual_units - forecast_units))\n             / SUM(actual_units), 2) AS error_pct\nFROM daily_plan\nWHERE actual_units IS NOT NULL\nGROUP BY location_id\nORDER BY location_id;` },
           diff: 'L02 has 0% bias and 7% WAPE. Its misses were real, and they happened to cancel. L01 is under-forecast (positive bias); L03 is over-forecast (negative).',
           use: ['"Are we consistently too high or too low?" → bias', '"How wrong are we?" → WAPE', 'Report both; a planner needs direction and size', 'Both exclude the row with no actual, so numerator and denominator cover the same rows'] },
         { t: 'run', h: 'Split a KPI to find the cause', key: "A total hides where the error is. Group by the thing you suspect.", sql: `SELECT promo,\n       COUNT(*)            AS plan_rows,\n       SUM(forecast_units) AS forecast,\n       SUM(actual_units)   AS actual,\n       ROUND(100.0 * SUM(actual_units - forecast_units)\n             / SUM(actual_units), 1) AS bias_pct\nFROM daily_plan\nWHERE actual_units IS NOT NULL\nGROUP BY promo\nORDER BY promo;`,
-          note: `Non-promotional rows are close to forecast. Promotional rows sold well above it. That is root-cause analysis in one query: the forecast is not wrong everywhere, the <strong>promotional uplift</strong> is too low. Swap <code>promo</code> for <code>plan_date</code>, <code>product_id</code> or <code>location_id</code> to cut the same KPI a different way.` },
-        { t: 'run', h: 'Days of cover against lead time', key: "If stock runs out before the next delivery can arrive, the item is at risk.", sql: `SELECT i.location_id, i.product_id, i.on_hand, i.daily_demand,\n       ROUND(1.0 * i.on_hand / NULLIF(i.daily_demand, 0), 1) AS days_cover,\n       p.lead_time_days,\n       CASE\n         WHEN p.product_id IS NULL THEN 'No master data'\n         WHEN i.daily_demand = 0   THEN 'No demand'\n         WHEN 1.0 * i.on_hand / i.daily_demand < p.lead_time_days THEN 'At risk'\n         ELSE 'OK'\n       END AS status\nFROM inventory i\nLEFT JOIN products p ON p.product_id = i.product_id\nORDER BY i.location_id, i.product_id;`,
+          note: `Non-promotional rows are close to forecast. Promotional rows sold well above it. That narrows the investigation to promotional rows. Check how promotional uplift was set before attributing the difference to it. Swap <code>promo</code> for <code>plan_date</code>, <code>product_id</code> or <code>location_id</code> to cut the same KPI a different way.` },
+        { t: 'run', h: 'Days of cover against lead time', key: "If stock runs out before the next delivery can arrive, the item is at risk.", sql: `SELECT inventory.location_id, inventory.product_id, inventory.on_hand, inventory.daily_demand,\n       ROUND(1.0 * inventory.on_hand / NULLIF(inventory.daily_demand, 0), 1) AS days_cover,\n       products.lead_time_days,\n       CASE\n         WHEN products.product_id IS NULL THEN 'No master data'\n         WHEN inventory.daily_demand = 0   THEN 'No demand'\n         WHEN 1.0 * inventory.on_hand / inventory.daily_demand < products.lead_time_days THEN 'At risk'\n         ELSE 'OK'\n       END AS status\nFROM inventory\nLEFT JOIN products ON products.product_id = inventory.product_id\nORDER BY inventory.location_id, inventory.product_id;`,
           note: `Every tool from earlier chapters in one query: <code>LEFT JOIN</code> so the unknown product stays visible, <code>NULLIF</code> so zero demand does not cause a divide-by-zero, <code>1.0 *</code> for a decimal result, and <code>CASE</code> with the data-problem tests first.` },
         { t: 'compare', h: 'Reorder on inventory position, not on-hand',
-          intro: 'Which items are below their reorder point (daily_demand × lead_time_days + safety_stock)?',
-          a: { label: 'On-hand only', sql: `SELECT i.location_id, i.product_id,\n       i.on_hand + i.on_order AS position,\n       i.daily_demand * p.lead_time_days\n         + p.safety_stock AS reorder_point\nFROM inventory i\nJOIN products p ON p.product_id = i.product_id\nWHERE i.on_hand\n      < i.daily_demand * p.lead_time_days + p.safety_stock\nORDER BY i.location_id, i.product_id;` },
-          b: { label: 'On-hand + on-order', sql: `SELECT i.location_id, i.product_id,\n       i.on_hand + i.on_order AS position,\n       i.daily_demand * p.lead_time_days\n         + p.safety_stock AS reorder_point\nFROM inventory i\nJOIN products p ON p.product_id = i.product_id\nWHERE i.on_hand + i.on_order\n      < i.daily_demand * p.lead_time_days + p.safety_stock\nORDER BY i.location_id, i.product_id;` },
+          intro: 'A replenishment planner needs a reorder list. Compare checking stock on hand with checking stock on hand plus units already on order. The reorder point is daily demand × lead time + safety stock.',
+          a: { label: 'On-hand only', sql: `SELECT inventory.location_id, inventory.product_id,\n       inventory.on_hand + inventory.on_order AS position,\n       inventory.daily_demand * products.lead_time_days\n         + products.safety_stock AS reorder_point\nFROM inventory\nJOIN products ON products.product_id = inventory.product_id\nWHERE inventory.on_hand\n      < inventory.daily_demand * products.lead_time_days + products.safety_stock\nORDER BY inventory.location_id, inventory.product_id;` },
+          b: { label: 'On-hand + on-order', sql: `SELECT inventory.location_id, inventory.product_id,\n       inventory.on_hand + inventory.on_order AS position,\n       inventory.daily_demand * products.lead_time_days\n         + products.safety_stock AS reorder_point\nFROM inventory\nJOIN products ON products.product_id = inventory.product_id\nWHERE inventory.on_hand + inventory.on_order\n      < inventory.daily_demand * products.lead_time_days + products.safety_stock\nORDER BY inventory.location_id, inventory.product_id;` },
           diff: 'L01 / P01 is flagged on the left only. It has 80 on hand and 50 already on order, which puts it above its reorder point of 120. Ordering again would double up.',
           use: ['Deciding whether to order → inventory position (on_hand + on_order)', 'Deciding whether you can ship today → on_hand', '"Why did the system not order?" is often answered by stock already on order'] },
-        { t: 'run', h: 'Receipts that are overdue', key: "An order that has not arrived is still counted in on_order. Check it is real.", sql: `SELECT receipt_id, location_id, product_id, expected_date,\n       DATEDIFF(day, expected_date, GETDATE()) AS days_overdue\nFROM receipts\nWHERE received_date IS NULL\nORDER BY days_overdue DESC;`,
-          note: `These two receipts are expected and not received. If the system is relying on them, the items they cover are more exposed than the reorder list suggests. This is a planning exception: it needs a person to chase the supplier.` },
+        { t: 'run', h: 'Receipts that are overdue', key: "An order that has not arrived is still counted in on_order. Check it is real.", sql: `SELECT receipt_id, location_id, product_id, expected_date,\n       DATEDIFF(day, expected_date, GETDATE()) AS days_overdue\nFROM receipts\nWHERE received_date IS NULL\n  AND expected_date < GETDATE()\nORDER BY days_overdue DESC;`,
+          note: `These two receipts are past their expected date and have no arrival recorded. If the system is relying on them, the items they cover are more exposed than the reorder list suggests. This is a planning exception: it needs a person to chase the supplier.` },
         { t: 'text', h: 'From SQL to Excel without losing rows', key: "Pull at the grain you will analyse, and carry a control total across.", html: `
 <p>The posting describes the working pattern directly: investigate in SQL, then pull the data into Excel for analysis.</p>
 <ol><li><strong>Decide the grain</strong> of the extract first. Detail rows if you will pivot several ways; pre-summarised if the detail is huge.</li>
@@ -1199,28 +1223,28 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
 <li><strong>Watch the blanks.</strong> SQL NULL arrives as an empty cell, and Excel will treat it as 0 (chapter on SUMIFS).</li>
 <li><strong>Then analyse:</strong> PivotTable, lookups, chart.</li></ol>` },
         { t: 'try', id: 'kpi-bias', title: 'Bias in units by location',
-          prompt: 'From daily_plan rows that have an actual, return location_id and bias_units (sum of actual_units minus forecast_units) per location. Sort by location_id.',
+          prompt: "Planning wants to see which locations sold more or less than they forecast.\n\nFrom daily_plan, use only rows with recorded actuals. Sum actual_units minus forecast_units per location. Return location_id and bias_units, sorted by location_id.",
           starter: `SELECT location_id,\n       \nFROM daily_plan\n`,
           solution: `SELECT location_id,\n       SUM(actual_units - forecast_units) AS bias_units\nFROM daily_plan\nWHERE actual_units IS NOT NULL\nGROUP BY location_id\nORDER BY location_id;`, ordered: true,
           hints: ['SUM(actual_units - forecast_units)', 'WHERE actual_units IS NOT NULL', 'GROUP BY location_id'],
           explain: 'L01 +200 (under-forecast), L02 exactly 0, L03 −25. The filter matters: without it SUM would still skip the NULL row here, but stating it makes the scope explicit.' },
         { t: 'try', id: 'kpi-promo', title: 'Promotion against baseline',
-          prompt: 'For location L01 rows that have an actual, return promo, total_forecast and total_actual grouped by promo. Sort by promo.',
+          prompt: "The Chicago planner wants to see whether promotions account for a forecast gap.\n\nUse L01 rows in daily_plan with recorded actuals. Group by promo and return promo, total_forecast, and total_actual. Sort by promo.",
           starter: `SELECT promo,\n       \nFROM daily_plan\n`,
           solution: `SELECT promo,\n       SUM(forecast_units) AS total_forecast,\n       SUM(actual_units)   AS total_actual\nFROM daily_plan\nWHERE location_id = 'L01'\n  AND actual_units IS NOT NULL\nGROUP BY promo\nORDER BY promo;`, ordered: true,
           hints: ['Two filters in WHERE, then GROUP BY promo.', "location_id = 'L01' AND actual_units IS NOT NULL"],
           explain: 'Promo rows: 1,435 forecast against 1,625 actual, a 190-unit shortfall in the plan. Baseline rows are within 10 units.' },
         { t: 'try', id: 'kpi-cover', title: 'Days of cover',
-          prompt: 'From inventory, return location_id, product_id and days_cover (on_hand ÷ daily_demand, rounded to 2 decimals) for rows where daily_demand is greater than 0. Sort by location_id, then product_id.',
+          prompt: "A replenishment planner needs to see how many days current stock will last.\n\nFrom inventory, use rows with daily_demand greater than zero. Return location_id, product_id, and days_cover (on_hand ÷ daily_demand) rounded to two decimals. Sort by location_id, then product_id.",
           starter: `SELECT location_id, product_id,\n       \nFROM inventory\n`,
           solution: `SELECT location_id, product_id,\n       ROUND(1.0 * on_hand / daily_demand, 2) AS days_cover\nFROM inventory\nWHERE daily_demand > 0\nORDER BY location_id, product_id;`, ordered: true,
           hints: ['Start the division with 1.0 * so it is not cut to a whole number.', 'WHERE daily_demand > 0 avoids dividing by zero.', 'ROUND(1.0 * on_hand / daily_demand, 2)'],
           explain: 'L01 / P03 has 0.63 days of cover against a 5-day lead time: the most exposed item in the data.' },
         { t: 'try', id: 'kpi-reorder', title: 'The reorder list',
-          prompt: 'Join inventory to products. Return location_id, product_id, inventory_position (on_hand + on_order) and reorder_point (daily_demand × lead_time_days + safety_stock) for rows where the position is below the reorder point. Sort by location_id, then product_id.',
-          starter: `SELECT i.location_id, i.product_id,\n       i.on_hand + i.on_order AS inventory_position,\n       \nFROM inventory i\n`,
-          solution: `SELECT i.location_id, i.product_id,\n       i.on_hand + i.on_order AS inventory_position,\n       i.daily_demand * p.lead_time_days + p.safety_stock AS reorder_point\nFROM inventory i\nJOIN products p ON p.product_id = i.product_id\nWHERE i.on_hand + i.on_order < i.daily_demand * p.lead_time_days + p.safety_stock\nORDER BY i.location_id, i.product_id;`, ordered: true,
-          hints: ['JOIN products p ON p.product_id = i.product_id', 'Repeat both expressions in WHERE; SQL Server will not accept the aliases there.', 'WHERE i.on_hand + i.on_order < i.daily_demand * p.lead_time_days + p.safety_stock'],
+          prompt: "A replenishment planner wants a list of items below their reorder point.\n\nJoin inventory to products. Keep rows where on_hand plus on_order is below daily_demand × lead_time_days plus safety_stock. Return location_id, product_id, inventory_position, and reorder_point. Sort by location_id, then product_id.",
+          starter: `SELECT inventory.location_id, inventory.product_id,\n       inventory.on_hand + inventory.on_order AS inventory_position,\n       \nFROM inventory\n`,
+          solution: `SELECT inventory.location_id, inventory.product_id,\n       inventory.on_hand + inventory.on_order AS inventory_position,\n       inventory.daily_demand * products.lead_time_days + products.safety_stock AS reorder_point\nFROM inventory\nJOIN products ON products.product_id = inventory.product_id\nWHERE inventory.on_hand + inventory.on_order < inventory.daily_demand * products.lead_time_days + products.safety_stock\nORDER BY inventory.location_id, inventory.product_id;`, ordered: true,
+          hints: ['JOIN products ON products.product_id = inventory.product_id', 'Repeat both expressions in WHERE; SQL Server will not accept the aliases there.', 'WHERE inventory.on_hand + inventory.on_order < inventory.daily_demand * products.lead_time_days + products.safety_stock'],
           explain: 'Six items. The INNER JOIN leaves out P99, which has stock and no master data; mention it as a separate exception instead of letting it vanish.' },
         { t: 'quiz', q: 'A location reports 0% forecast bias for the week. What can you conclude?',
           options: ['The forecast was accurate', 'Over- and under-forecasts added up to zero; accuracy needs WAPE', 'No actuals were loaded'], correct: 1,
@@ -1230,7 +1254,7 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
     /* ------------------------------------------------------------------ 7 */
     {
       id: 'xl-lookup', title: 'Excel: lookups and clean keys', mins: 20, priority: 'Must', excel: true,
-      builds: 'A lookup is a LEFT JOIN done one cell at a time. Everything from lesson 4 carries over.',
+      builds: 'Start with a plan row and bring in its product name from another sheet. Follow the same product code through a missing match, a cleanup, and a duplicate check.',
       outcome: 'Write an exact-match XLOOKUP or VLOOKUP, lock ranges so the formula copies down safely, and clean and de-duplicate a key.',
       core: [["XLOOKUP", "Finds a key and returns the value beside it.", "Exact match by default. The fourth argument handles missing keys."], ["VLOOKUP", "Older lookup that returns a column by number.", "Without FALSE it approximates and returns wrong values."], ["INDEX + MATCH", "A lookup that works in every Excel version.", "The fallback when XLOOKUP is not available."], ["$ reference", "Pins a range so it does not move when copied.", "An unpinned lookup range slides and starts missing rows."], ["TRIM, UPPER, LEN", "Clean and inspect a key.", "Excel ignores case and never ignores spaces."], ["COUNTIF", "Counts how often a value occurs.", "A count above 1 flags a duplicate."], ["IFERROR", "Replaces an error with a value you choose.", "Turns #N/A into a label you can filter."]],
       tip: "Say the SQL equivalent as you work: \"this XLOOKUP is my left join.\" It shows you understand both.",
@@ -1245,20 +1269,20 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
 <p>Row 1 is the header, so plan_id 1 sits in row 2. Each sheet below has a Copy button: paste into cell A1 of a blank sheet in Excel or Google Sheets and name the tab to match.</p>` },
         { t: 'sheet', h: 'Sheet: Plan', table: 'daily_plan', sheet: 'Plan' },
         { t: 'sheet', h: 'Sheet: Products', table: 'products', sheet: 'Products' },
-        { t: 'compare', h: 'XLOOKUP is a LEFT JOIN',
-          intro: 'Add the product name to plan rows 1, 2 and 18.',
+        { t: 'compare', h: 'XLOOKUP and LEFT JOIN with a unique lookup key',
+          intro: 'A planner needs names beside the codes on plan rows 1, 2, and 18. Keep all three rows and label any code missing from the catalog.',
           a: { label: 'Excel, typed in H2 and copied down', formula: `=XLOOKUP(D2, Products!A:A,\n         Products!B:B, "MISSING")`, shows: 'Row 2 → Burger buns · Row 3 → Potato fries · Row 19 (plan 18, P99) → MISSING' },
-          b: { label: 'SQL', sql: `SELECT d.plan_id, d.product_id,\n       ISNULL(p.product_name, 'MISSING')\n         AS product_name\nFROM daily_plan d\nLEFT JOIN products p\n  ON p.product_id = d.product_id\nWHERE d.plan_id IN (1, 2, 18);` },
-          diff: 'Same result. XLOOKUP reads: find D2 in Products column A, return the value beside it from column B, and if it is not there say MISSING. Every plan row is kept, exactly like a LEFT JOIN, and the fourth argument does the job of ISNULL.',
+          b: { label: 'SQL', sql: `SELECT daily_plan.plan_id, daily_plan.product_id,\n       ISNULL(products.product_name, 'MISSING')\n         AS product_name\nFROM daily_plan\nLEFT JOIN products\n  ON products.product_id = daily_plan.product_id\nWHERE daily_plan.plan_id IN (1, 2, 18);` },
+          diff: 'Same result. XLOOKUP reads: find D2 in Products column A, return the value beside it from column B, and if it is not there say MISSING. Every plan row is kept. The catalog has one row per product, so this lookup returns the same names as the SQL result. The fourth argument supplies the text to show when there is no match.',
           use: ['XLOOKUP(what, where to look, what to return, if not found)', 'Leave the fourth argument out and a missing key shows #N/A', 'Filter the new column for MISSING to get the exception list, the Excel version of LEFT JOIN + IS NULL', 'XLOOKUP returns the first match only. A duplicate key in the lookup sheet is hidden, where SQL would show it as an extra row'] },
         { t: 'compare', h: 'XLOOKUP and VLOOKUP',
-          intro: 'Older workbooks and older Excel versions use VLOOKUP. Know both.',
+          intro: 'You need to add a product name from the Products sheet. Compare an exact-match XLOOKUP with a VLOOKUP for a workbook that uses the older formula.',
           a: { label: 'XLOOKUP', formula: `=XLOOKUP(D2, Products!A:A,\n         Products!B:B, "MISSING")`, shows: 'Exact match by default. Lookup and return columns are named separately, so it can look left or right and survives inserted columns.' },
           b: { label: 'VLOOKUP', formula: `=VLOOKUP(D2, Products!A:F,\n         2, FALSE)`, shows: 'Looks in the first column of the range and returns column number 2. Wrap it in IFERROR(…, "MISSING") to handle missing keys.' },
           diff: 'VLOOKUP needs the key in the leftmost column, counts the return column by number, and defaults to approximate match. Leave out FALSE and it returns a wrong, plausible-looking value instead of an error.',
           use: ['Always end VLOOKUP with FALSE (or 0)', 'XLOOKUP when the Excel version has it (2021 and Microsoft 365)', 'INDEX(return_range, MATCH(key, lookup_range, 0)) is the third option and works everywhere'] },
         { t: 'compare', h: 'Lock the range before you copy the formula down',
-          intro: 'The formula in H2 is copied down to H25.',
+          intro: 'The first product lookup works in H2. Fill it down to H25 while keeping the catalog range fixed and letting the product code cell move.',
           a: { label: 'Relative range', formula: `=XLOOKUP(D2, Products!A2:A7,\n         Products!B2:B7, "MISSING")`, shows: 'In H3 it has become Products!A3:A8. Each row down, the lookup range slides one row and products fall off the top, so real products start returning MISSING.' },
           b: { label: 'Absolute range', formula: `=XLOOKUP(D2, Products!$A$2:$A$7,\n         Products!$B$2:$B$7, "MISSING")`, shows: 'D2 still moves to D3, D4 … and the lookup range stays put.' },
           diff: 'A plain reference moves when copied. A $ pins the column, the row or both. Whole-column references (A:A) do not slide and need no $.',
@@ -1274,25 +1298,25 @@ G2:  =COUNTIF(E:E, E2)       how many times this clean key occurs</pre>
 <li><code>TRIM</code> removes leading and trailing spaces and squeezes repeated spaces inside the text to one.</li>
 <li>A number stored as text (left-aligned, green corner) will not match a real number. <code>VALUE(x)</code> converts it.</li></ul>` },
         { t: 'compare', h: 'COUNTIF flags duplicates. GROUP BY lists them.',
-          intro: 'Which cleaned feed keys occur more than once?',
+          intro: 'A feed validation report needs to find repeated cleaned product codes. Compare flagging the original rows in Excel with listing each repeated code once in SQL.',
           a: { label: 'Excel helper column', formula: `=COUNTIF(E:E, E2)`, shows: 'Writes a count on every row: 2 on both P02 rows, 1 on the rest. Filter for values above 1.' },
           b: { label: 'SQL', sql: `SELECT UPPER(TRIM(raw_product_id)) AS clean_id,\n       COUNT(*) AS row_count\nFROM product_feed\nGROUP BY UPPER(TRIM(raw_product_id))\nHAVING COUNT(*) > 1;` },
           diff: 'COUNTIF keeps every row and adds the count beside it. GROUP BY + HAVING collapses to one row per duplicated key.',
           use: ['See the offending rows in place → COUNTIF helper column, then filter', 'Want just the list of duplicated keys → PivotTable with Count, or SQL', 'Conditional Formatting → Duplicate Values highlights them without a formula'] },
         { t: 'try', id: 'xl-missing', title: 'Which product is unmatched?', sheets: ['daily_plan', 'products'],
-          prompt: 'On the Plan sheet, add the XLOOKUP from above in column H and copy it down. One product_id returns MISSING. Which one?',
-          answerSql: `SELECT DISTINCT d.product_id FROM daily_plan d LEFT JOIN products p ON p.product_id = d.product_id WHERE p.product_id IS NULL`, answer: 'P99',
+          prompt: "A planner needs readable product names on the Plan sheet and wants to spot missing catalog entries.\n\nAdd the exact-match XLOOKUP to column H and fill it down. Use MISSING for an unmatched row. Enter the product ID that comes back MISSING.",
+          answerSql: `SELECT DISTINCT daily_plan.product_id FROM daily_plan LEFT JOIN products ON products.product_id = daily_plan.product_id WHERE products.product_id IS NULL`, answer: 'P99',
           solution: `=XLOOKUP(D2, Products!A:A, Products!B:B, "MISSING")`,
           hints: ['Filter column H for MISSING, or scan Products column A for an ID that is not there.', 'It is on plan_id 18.'],
           explain: 'P99 is in the plan and not in the product list. Report it; do not delete the row.' },
         { t: 'try', id: 'xl-rawmatch', title: 'How many feed keys match before cleaning?', sheets: ['product_feed', 'products'],
-          prompt: 'On the Feed sheet, look each raw_product_id (column B) up in Products column A without cleaning it. How many of the 7 feed rows find a match in Excel?',
-          answerSql: `SELECT COUNT(*) FROM product_feed f JOIN products p ON UPPER(f.raw_product_id) = p.product_id`, answer: 4,
+          prompt: "You are checking whether product codes in the incoming feed work as received.\n\nLook up Feed column B against Products column A in Excel without changing the text. Enter how many of the seven feed rows find an exact match.",
+          answerSql: `SELECT COUNT(*) FROM product_feed JOIN products ON UPPER(product_feed.raw_product_id) = products.product_id`, answer: 4,
           solution: `=XLOOKUP(B2, Products!A:A, Products!A:A, "MISSING")`,
           hints: ['Excel ignores case, so p03 matches.', 'Spaces still break a match, at either end.'],
           explain: 'Four: both P02 rows, p03 and P06. The three keys with spaces fail. The raw SQL join in lesson 5 matched only three because that comparison was also case-sensitive. Same data, different matching rules in each tool.' },
         { t: 'try', id: 'xl-dupe', title: 'Which cleaned key is duplicated?', sheets: ['product_feed'],
-          prompt: 'On the Feed sheet, build the clean key with UPPER(TRIM()) and count occurrences with COUNTIF. Which product ID appears twice?',
+          prompt: "You need to identify repeated product codes before using the feed as a lookup.\n\nOn Feed, build a clean ID with UPPER(TRIM()) and count occurrences with COUNTIF. Enter the cleaned product ID that appears twice.",
           answerSql: `SELECT UPPER(TRIM(raw_product_id)) FROM product_feed GROUP BY UPPER(TRIM(raw_product_id)) HAVING COUNT(*) > 1`, answer: 'P02',
           solution: `E2: =UPPER(TRIM(B2))     G2: =COUNTIF(E:E, E2)`,
           hints: ['Look for the 2 in the COUNTIF column.'],
@@ -1305,28 +1329,28 @@ G2:  =COUNTIF(E:E, E2)       how many times this clean key occurs</pre>
     /* ------------------------------------------------------------------ 8 */
     {
       id: 'xl-summary', title: 'Excel: SUMIFS, PivotTables and IF', mins: 20, priority: 'Must', excel: true,
-      builds: 'SUMIFS is WHERE + SUM. A PivotTable is GROUP BY. IF is CASE. Lessons 3 and 5 in spreadsheet form.',
+      builds: 'Start with one forecast total, then break it out by location. Use a helper column to flag exceptions and distinguish missing actuals from actual sales of zero.',
       outcome: 'Total with several conditions, build a PivotTable summary, label exceptions with IF, and keep blanks from being read as zero.',
       core: [["SUMIFS", "Adds values where every condition is true.", "WHERE + SUM. The sum range comes first."], ["COUNTIFS, AVERAGEIFS", "Count or average with the same condition pairs.", "Conditions compare a column with a value, not with another column."], ["PivotTable", "A summary row for every group.", "GROUP BY. Refresh it after the data changes."], ["IF, IFS", "Label or calculate by condition.", "CASE. Put the blank test first."], ["Blank and zero", "Excel treats an empty cell as 0 in arithmetic.", "A missing value looks like a real shortfall."], ["COUNT, COUNTA, COUNTBLANK", "Count numbers, non-empty cells, empty cells.", "The quick completeness check."], ["Control total", "Compare a row count and one sum with the source.", "Catches rows lost to a filter or a bad paste."]],
       tip: "State a control total before you report: \"24 rows, forecast 3,560, same as the extract.\"",
       steps: [
         { t: 'compare', h: 'SUMIFS is WHERE + SUM',
-          intro: 'Total forecast for Chicago (L01) promotional rows.',
+          intro: 'The Chicago planner needs one number for a report: total forecast units for promotional rows at L01.',
           a: { label: 'Excel', formula: `=SUMIFS(Plan!E:E,\n        Plan!C:C, "L01",\n        Plan!G:G, 1)`, shows: 'Result: 1435' },
           b: { label: 'SQL', sql: `SELECT SUM(forecast_units)\n         AS total_forecast\nFROM daily_plan\nWHERE location_id = 'L01'\n  AND promo = 1;` },
           diff: 'Same number. The range to add comes first, then pairs of (range to test, value to match). Every pair must be true, like conditions joined by AND.',
           use: ['SUMIFS(sum_range, test_range1, value1, test_range2, value2, …)', 'COUNTIFS and AVERAGEIFS take the same pairs (COUNTIFS has no sum range)', 'Comparisons go in quotes: ">100", "<>L03". With a cell: ">" & J1', 'Dates: use DATE(2026,11,2) as the value, or a cell that holds the date', 'Older SUMIF has the arguments in a different order: SUMIF(test_range, value, sum_range)'] },
         { t: 'compare', h: 'SUMIFS answers one question. A PivotTable answers it for every group.',
-          intro: 'Forecast and actual totals by location.',
+          intro: 'A planning lead needs a table with one row per location and columns for total forecast and total actual units.',
           a: { label: 'PivotTable', formula: `Insert → PivotTable (select the Plan data)\nRows:    location_id\nValues:  Sum of forecast_units\n         Sum of actual_units\nFilters: promo (optional)`, shows: 'One line per location plus a Grand Total, the same grid as the SQL result.' },
           b: { label: 'SQL', sql: `SELECT location_id,\n       SUM(forecast_units) AS forecast,\n       SUM(actual_units)   AS actual\nFROM daily_plan\nGROUP BY location_id\nORDER BY location_id;` },
           diff: 'Rows is GROUP BY, Values are the aggregates, Filters is WHERE. A value filter on the pivot (Value Filters → Greater Than) is HAVING.',
           use: ['One figure for a cell in a report → SUMIFS', 'A breakdown you will slice several ways → PivotTable', 'If Values shows Count instead of Sum, the column contains text or blanks; fix the column or change Value Field Settings', 'Right-click → Refresh after the data changes; a pivot does not update itself'] },
-        { t: 'compare', h: 'Excel reads a blank as 0. SQL keeps NULL.',
-          intro: 'Actual minus forecast for plan 16 (no actual recorded) and plan 17 (a real zero).',
+        { t: 'compare', h: 'How a blank actual affects subtraction in Excel and SQL',
+          intro: 'Calculate actual minus forecast for two plan rows. Plan 16 has a missing actual. Plan 17 recorded zero. Check whether the output keeps those cases distinct.',
           a: { label: 'Excel', formula: `H17:  =F17-E17\nH18:  =F18-E18`, shows: 'H17 → -140 (blank treated as 0) · H18 → -70. Both look like real shortfalls.' },
           b: { label: 'SQL', sql: `SELECT plan_id, forecast_units,\n       actual_units,\n       actual_units - forecast_units\n         AS variance\nFROM daily_plan\nWHERE plan_id IN (16, 17);` },
-          diff: 'SQL refuses to calculate with a missing value. Excel silently substitutes zero, so a missing feed looks like a 140-unit miss. This is the same NULL-versus-zero point as lesson 5, and Excel gets it wrong by default.',
+          diff: 'SQL returns NULL when either value in this subtraction is missing. Excel treats the referenced blank as zero in this formula, so a missing actual looks like a 140-unit miss. Check for blanks before subtracting.',
           use: ['Guard the formula: =IF(F17="", "", F17-E17)', 'Count the blanks before trusting a total: =COUNTBLANK(F2:F25)', 'COUNT counts numbers, COUNTA counts non-empty cells, COUNTBLANK counts empty ones'] },
         { t: 'text', h: 'IF is CASE', key: "First true test wins, so the blank check goes first.", html: `
 <pre class="code">=IF(F2="", "Missing",
@@ -1353,25 +1377,25 @@ J1:  =SUM(H2:H25) / SUM(F2:F25)      format as a percentage</pre>
 <tr><td><strong>EOMONTH, WEEKNUM, TEXT</strong></td><td>Month end, week number, and a date shown in a chosen format.</td><td>Group daily rows into weeks or months, like DATEPART.</td></tr>
 </tbody></table></div>` },
         { t: 'try', id: 'xl-sumifs', title: 'SUMIFS with a date', sheets: ['daily_plan'],
-          prompt: 'Using SUMIFS on the Plan sheet, what is the total forecast_units for location L01 on November 2, 2026?',
+          prompt: "The Chicago planner asks for the November 2, 2026 forecast total.\n\nOn Plan, use SUMIFS to add forecast_units for location L01 and that date. Enter the total units.",
           answerSql: `SELECT SUM(forecast_units) FROM daily_plan WHERE location_id = 'L01' AND plan_date = '2026-11-02'`, answer: 640,
           solution: `=SUMIFS(Plan!E:E, Plan!C:C, "L01", Plan!B:B, DATE(2026,11,2))`,
           hints: ['Sum range is column E. Two test pairs: column C and column B.', 'Three rows qualify: plan_id 7, 8 and 9.'],
           explain: '110 + 210 + 320. If your pasted dates are text rather than dates, use "2026-11-02" as the value instead.' },
         { t: 'try', id: 'xl-countifs', title: 'COUNTIFS with a helper column', sheets: ['daily_plan'],
-          prompt: 'How many Plan rows for location L02 have actual_units greater than forecast_units? Add a helper column for the comparison, then count with COUNTIFS.',
+          prompt: "The Denver planner wants to count the rows where actual sales beat forecast.\n\nOn Plan, add a helper column that checks whether actual_units is greater than forecast_units for each row. Use COUNTIFS to count TRUE rows at L02. Enter the count.",
           answerSql: `SELECT COUNT(*) FROM daily_plan WHERE location_id = 'L02' AND actual_units > forecast_units`, answer: 4,
           solution: `H2: =F2>E2  (copy down)     =COUNTIFS(Plan!C:C, "L02", Plan!H:H, TRUE)`,
           hints: ['COUNTIFS compares a column with a fixed value, not with another column. That is why the helper column is needed.', 'L02 has eight rows; check each one.'],
           explain: 'plan_id 4, 5, 18 and 23. Comparing two columns row by row needs a helper column (or SUMPRODUCT); in SQL it is simply WHERE actual_units > forecast_units.' },
         { t: 'try', id: 'xl-gap', title: 'Promotional gap', sheets: ['daily_plan'],
-          prompt: 'For location L01 promotional rows (promo = 1), what is total actual_units minus total forecast_units?',
+          prompt: "The Chicago planner wants the unit gap for promotions.\n\nOn Plan, keep L01 rows where promo is 1. Subtract the total forecast_units from the total actual_units. Enter the signed difference in units.",
           answerSql: `SELECT SUM(actual_units) - SUM(forecast_units) FROM daily_plan WHERE location_id = 'L01' AND promo = 1`, answer: 190,
           solution: `=SUMIFS(Plan!F:F, Plan!C:C, "L01", Plan!G:G, 1) - SUMIFS(Plan!E:E, Plan!C:C, "L01", Plan!G:G, 1)`,
           hints: ['Two SUMIFS with the same conditions, one on column F and one on column E.', 'Actual total is 1625.'],
           explain: '1625 − 1435. A PivotTable filtered to L01 and promo = 1 gives the same two totals.' },
         { t: 'try', id: 'xl-wape', title: 'Overall forecast error', sheets: ['daily_plan'],
-          prompt: 'Calculate WAPE for the whole Plan sheet using the blank-safe helper column. Enter the percentage rounded to 2 decimals (for example 12.34).',
+          prompt: "A planner needs one forecast error percentage for the Plan sheet.\n\nUse the helper column to total absolute differences for rows with an actual. Divide by total actual units for those rows. Enter the percentage rounded to two decimals, such as 12.34.",
           answerSql: `SELECT ROUND(100.0 * SUM(ABS(actual_units - forecast_units)) / SUM(actual_units), 2) FROM daily_plan WHERE actual_units IS NOT NULL`, answer: 11.54, tol: 0.011,
           solution: `H2: =IF(F2="", "", ABS(F2-E2))     =SUM(H2:H25)/SUM(F2:F25)`,
           hints: ['Numerator: sum of the absolute differences, skipping the blank actual.', 'Denominator: sum of actual_units, 3595.'],
@@ -1384,33 +1408,33 @@ J1:  =SUM(H2:H25) / SUM(F2:F25)      format as a percentage</pre>
     /* ------------------------------------------------------------------ 9 */
     {
       id: 'steps', title: 'Multi-step queries: subquery, CTE, window', mins: 20, priority: 'If time',
-      builds: 'Back to SQL. You used WITH and ROW_NUMBER in lesson 6; this lesson explains them properly.',
+      builds: 'Break a question into a small calculation and a query that uses it. Then show an order total beside each of its detail lines, or rank lines so you can keep just one.',
       outcome: 'Break a hard question into named steps and add a group total without losing the detail rows.',
       core: [["Subquery", "A query in brackets, used as a value or a table.", "Fine for one small inner value."], ["CTE (WITH)", "A named sub-result at the top of the query.", "Lets you build and explain one step at a time."], ["Window function (OVER)", "Calculates across related rows without collapsing them.", "Detail rows and a group total in the same result."], ["PARTITION BY", "The grouping inside OVER.", "The window version of GROUP BY."], ["ROW_NUMBER", "Numbers rows within each partition.", "Latest record per key, top N per group, de-duplication."]],
       tip: "Write the CTE for step one, run it, look at it, then build step two on top.",
       steps: [
         { t: 'compare', h: 'Subquery and CTE: same answer, different readability',
-          intro: 'Order lines larger than the average line.',
+          intro: 'Fulfillment wants line IDs and quantities for order lines larger than the overall average. Calculate the average once and use it as the cutoff.',
           a: { label: 'Subquery', sql: `SELECT line_id, qty_ordered\nFROM order_lines\nWHERE qty_ordered >\n      (SELECT AVG(qty_ordered)\n       FROM order_lines);` },
-          b: { label: 'CTE', sql: `WITH avg_line AS (\n  SELECT AVG(qty_ordered) AS avg_qty\n  FROM order_lines\n)\nSELECT l.line_id, l.qty_ordered\nFROM order_lines l\nCROSS JOIN avg_line a\nWHERE l.qty_ordered > a.avg_qty;` },
+          b: { label: 'CTE', sql: `WITH average_line AS (\n  SELECT AVG(qty_ordered) AS avg_qty\n  FROM order_lines\n)\nSELECT order_lines.line_id, order_lines.qty_ordered\nFROM order_lines\nCROSS JOIN average_line\nWHERE order_lines.qty_ordered > average_line.avg_qty;` },
           diff: 'Identical rows. A subquery is a query in brackets used as a value or a table. A CTE gives that inner query a name at the top so the main query reads top to bottom.',
           use: ['One small inner value → subquery is fine', 'Two or more steps, or the same step reused → CTE', 'In an interview a CTE lets you explain step one before writing step two'] },
         { t: 'compare', h: 'GROUP BY collapses rows. A window function keeps them.',
-          intro: 'Order totals for O1001 and O1004.',
+          intro: 'Compare two report layouts for O1001 and O1004: one total per order, or one row per item line with its order total beside it.',
           a: { label: 'GROUP BY', sql: `SELECT order_id,\n       SUM(qty_ordered) AS order_total\nFROM order_lines\nWHERE order_id IN ('O1001','O1004')\nGROUP BY order_id;` },
           b: { label: 'SUM() OVER', sql: `SELECT line_id, order_id, qty_ordered,\n       SUM(qty_ordered) OVER (\n         PARTITION BY order_id\n       ) AS order_total\nFROM order_lines\nWHERE order_id IN ('O1001','O1004');` },
           diff: 'GROUP BY returns one row per order. OVER (PARTITION BY …) calculates the same total and writes it on every line, so you can show each line as a share of its order.',
           use: ['Only the summary needed → GROUP BY', 'Detail rows plus a group total, rank or running number → window function', 'PARTITION BY is the window version of GROUP BY'] },
-        { t: 'run', h: 'Latest record per key', key: "Number newest to oldest inside each key, keep number 1.", sql: `WITH ranked AS (\n  SELECT receipt_id, location_id, product_id, expected_date,\n         ROW_NUMBER() OVER (\n           PARTITION BY location_id, product_id\n           ORDER BY expected_date DESC\n         ) AS rn\n  FROM receipts\n)\nSELECT receipt_id, location_id, product_id, expected_date\nFROM ranked\nWHERE rn = 1\nORDER BY location_id, product_id;`,
-          note: `Number the receipts for each location and product from newest to oldest, then keep number 1. "Most recent status per order", "last price per item" and "first load per day" are all this query with different columns.` },
+        { t: 'run', h: 'Receipt with the latest expected date per location and product', key: "Sort each group by expected date and keep its first row.", sql: `WITH ranked AS (\n  SELECT receipt_id, location_id, product_id, expected_date,\n         ROW_NUMBER() OVER (\n           PARTITION BY location_id, product_id\n           ORDER BY expected_date DESC, receipt_id\n         ) AS rn\n  FROM receipts\n)\nSELECT receipt_id, location_id, product_id, expected_date\nFROM ranked\nWHERE rn = 1\nORDER BY location_id, product_id;`,
+          note: `Number the receipts within each location and product by expected date, then keep number 1. Receipt ID breaks ties. To find the most recent actual arrival, use received_date and exclude receipts without an arrival.` },
         { t: 'try', id: 'steps-wape', title: 'Forecast error by location',
-          prompt: 'Using only daily_plan rows where actual_units is not NULL, return location_id and wape_pct = 100 × SUM(ABS(actual_units − forecast_units)) ÷ SUM(actual_units), rounded to 2 decimals. Sort by location_id.',
+          prompt: "A planning lead wants to compare forecast accuracy across locations.\n\nFrom daily_plan, keep rows with recorded actuals. Per location, divide total absolute error by total actual units and multiply by 100. Return location_id and wape_pct rounded to two decimals, sorted by location_id.",
           starter: `SELECT location_id,\n       \nFROM daily_plan\n`,
           solution: `SELECT location_id,\n       ROUND(100.0 * SUM(ABS(actual_units - forecast_units)) / SUM(actual_units), 2) AS wape_pct\nFROM daily_plan\nWHERE actual_units IS NOT NULL\nGROUP BY location_id\nORDER BY location_id;`, ordered: true,
           hints: ['ABS() makes over- and under-forecasts both positive.', '100.0 * SUM(ABS(actual_units - forecast_units)) / SUM(actual_units)', 'WHERE actual_units IS NOT NULL, GROUP BY location_id'],
           explain: 'Excluding the NULL actual keeps numerator and denominator on the same rows. This metric (weighted absolute percentage error) is common in planning teams.' },
         { t: 'try', id: 'steps-top', title: 'Largest line on each order',
-          prompt: 'Return order_id, product_id and qty_ordered for the single largest line on each order. If two lines tie, keep the one with the lower line_id. Sort by order_id.',
+          prompt: "A fulfillment lead wants one line per order to review its largest item quantity.\n\nFrom order_lines, keep the line with the highest qty_ordered per order. Break ties with the lowest line_id. Return order_id, product_id, and qty_ordered, sorted by order_id.",
           starter: `WITH ranked AS (\n  SELECT order_id, product_id, qty_ordered,\n         ROW_NUMBER() OVER (\n           PARTITION BY \n           ORDER BY \n         ) AS rn\n  FROM order_lines\n)\nSELECT order_id, product_id, qty_ordered\nFROM ranked\n`,
           solution: `WITH ranked AS (\n  SELECT order_id, product_id, qty_ordered,\n         ROW_NUMBER() OVER (\n           PARTITION BY order_id\n           ORDER BY qty_ordered DESC, line_id\n         ) AS rn\n  FROM order_lines\n)\nSELECT order_id, product_id, qty_ordered\nFROM ranked\nWHERE rn = 1\nORDER BY order_id;`, ordered: true,
           hints: ['PARTITION BY order_id', 'ORDER BY qty_ordered DESC, line_id', 'WHERE rn = 1'],
@@ -1421,7 +1445,7 @@ J1:  =SUM(H2:H25) / SUM(F2:F25)      format as a percentage</pre>
     /* ------------------------------------------------------------------ 11 */
     {
       id: 'kinaxis', title: 'Kinaxis Maestro: what to know', mins: 10, priority: 'Know', track: 'Kinaxis',
-      builds: 'You are not expected to operate it tomorrow. You are expected to know what it is and to connect it to what you can already do.',
+      builds: 'Learn what a planning platform does, then connect each term to an investigation you can already explain. Use the examples to discuss transferable skills and ask how HAVI runs its process.',
       outcome: 'Describe Kinaxis Maestro in two sentences, use its vocabulary correctly, and map each term to a SQL or Excel skill you have.',
       core: [["Kinaxis Maestro", "A cloud supply chain planning platform. Formerly called RapidResponse.", "It is the planning system this role supports. Use the current name, and know the old one."], ["Concurrent planning", "Demand, supply and inventory plans share one data model and recalculate together.", "A change in one place shows its effect everywhere at once, instead of passing between separate tools."], ["Scenario", "A private what-if copy of the plan that you can change and compare with the baseline.", "How planners test a change before committing it. Same idea as testing a fix in chapter 6."], ["Workbook, worksheet", "A workbook is a set of worksheets. A worksheet is a saved view of data: chosen columns, filters, calculations.", "A worksheet is a saved query. Your SELECT, WHERE and GROUP BY thinking carries over."], ["Hierarchy, filter", "Ways to roll data up (product family, region) and to narrow it (my items, my sites).", "GROUP BY and WHERE, chosen from menus."], ["Dashboard, scorecard", "Visual summaries of KPIs against targets.", "Where forecast accuracy and service level from chapter 7 are watched."], ["Data integration", "Scheduled loads that bring master data, orders and inventory in from source systems.", "Where dirty keys, duplicates and stale loads enter. Chapter 6 is how you find them."]],
       tip: "If asked about Kinaxis experience, be exact about what you have and have not used, then bridge: \"I have not worked in Maestro itself. The work underneath it, validating inputs, tracing a wrong number, checking forecast accuracy, is what I do in SQL and Excel.\"",
@@ -1456,32 +1480,32 @@ J1:  =SUM(H2:H25) / SUM(F2:F25)      format as a percentage</pre>
     minutes: 30,
     intro: 'Seven SQL tasks and two Excel tasks, no hints, in the order an assessment tends to build: filter, total, join, missing data, calculation, investigation, a planning exception, then the spreadsheet. Say your reasoning out loud as you type. Check each answer only after you have committed to it.',
     tasks: [
-      { id: 'mock-1', title: 'Filter and sort', prompt: 'Return order_id, customer and status for orders at location L01, newest order_date first, then by order_id.',
+      { id: 'mock-1', title: 'Filter and sort', prompt: "The Chicago team wants an order list for its daily review.\n\nFrom orders, return order_id, customer, and status for L01. Sort by order_date newest first, then order_id.",
         solution: `SELECT order_id, customer, status\nFROM orders\nWHERE location_id = 'L01'\nORDER BY order_date DESC, order_id;`, ordered: true,
         explain: 'Select, filter, sort. Two sort columns make the order unambiguous.' },
-      { id: 'mock-2', title: 'Count by group', prompt: 'Return status and order_count for each order status, most common first.',
+      { id: 'mock-2', title: 'Count by group', prompt: "A fulfillment lead wants a quick count of orders by status.\n\nFrom orders, return status and order_count. Count each order once and sort highest count first.",
         solution: `SELECT status, COUNT(*) AS order_count\nFROM orders\nGROUP BY status\nORDER BY order_count DESC;`, ordered: true,
         explain: 'orders has one row per order, so COUNT(*) is safe here.' },
-      { id: 'mock-3', title: 'Find unmatched records', prompt: 'Return line_id and product_id for order lines whose product_id is not in products.',
-        solution: `SELECT l.line_id, l.product_id\nFROM order_lines l\nLEFT JOIN products p ON p.product_id = l.product_id\nWHERE p.product_id IS NULL;`,
+      { id: 'mock-3', title: 'Find unmatched records', prompt: "A catalog validation report needs to flag order lines with unknown product codes.\n\nReturn line_id and product_id from order_lines when the product_id has no match in products.",
+        solution: `SELECT order_lines.line_id, order_lines.product_id\nFROM order_lines\nLEFT JOIN products ON products.product_id = order_lines.product_id\nWHERE products.product_id IS NULL;`,
         explain: 'LEFT JOIN + IS NULL. One unknown code and one code with a leading space.' },
-      { id: 'mock-4', title: 'Keep every row, with a condition', prompt: "Return location_name and total_ordered for all four locations: the sum of qty_ordered on orders that are not Cancelled. A location with nothing ordered must still appear, with 0. Sort by location_name.",
-        solution: `SELECT loc.location_name,\n       ISNULL(SUM(l.qty_ordered), 0) AS total_ordered\nFROM locations loc\nLEFT JOIN orders o\n  ON o.location_id = loc.location_id\n AND o.status <> 'Cancelled'\nLEFT JOIN order_lines l\n  ON l.order_id = o.order_id\nGROUP BY loc.location_name\nORDER BY loc.location_name;`, ordered: true,
+      { id: 'mock-4', title: 'Keep every row, with a condition', prompt: "Operations wants a center-by-center summary that includes centers with no orders to report.\n\nReturn location_name and total_ordered for all four locations. Sum qty_ordered on orders whose status is other than Cancelled. Show 0 for centers with no qualifying quantities. Sort by location_name.",
+        solution: `SELECT locations.location_name,\n       ISNULL(SUM(order_lines.qty_ordered), 0) AS total_ordered\nFROM locations\nLEFT JOIN orders\n  ON orders.location_id = locations.location_id\n AND orders.status <> 'Cancelled'\nLEFT JOIN order_lines\n  ON order_lines.order_id = orders.order_id\nGROUP BY locations.location_name\nORDER BY locations.location_name;`, ordered: true,
         explain: "Start FROM the table you must keep. The Cancelled test goes in ON, because in WHERE it would drop Dallas. ISNULL turns Dallas's NULL total into 0." },
-      { id: 'mock-5', title: 'Calculate with NULL in play', prompt: 'Return order_id, product_id and short_qty (qty_ordered minus qty_shipped) for lines that have a shipped quantity lower than the ordered quantity. Sort by order_id.',
+      { id: 'mock-5', title: 'Calculate with NULL in play', prompt: "A fulfillment lead wants to see which recorded shipments fell short.\n\nFrom order_lines, keep rows with qty_shipped below qty_ordered and a shipment quantity present. Return order_id, product_id, and short_qty (ordered minus shipped). Sort by order_id.",
         solution: `SELECT order_id, product_id,\n       qty_ordered - qty_shipped AS short_qty\nFROM order_lines\nWHERE qty_shipped < qty_ordered\nORDER BY order_id;`, ordered: true,
         explain: 'Unshipped lines hold NULL, and NULL < x is never true, so they drop out on their own. Say that out loud; it shows you thought about it.' },
-      { id: 'mock-6', title: 'Investigate a mismatch', prompt: 'The store for O1004 says their order shipped but the screen says Open. Return order_id, source_status, screen_status and synced_at for every order where the screen status differs from the status in orders.',
-        solution: `SELECT o.order_id,\n       o.status AS source_status,\n       s.status AS screen_status,\n       s.synced_at\nFROM orders o\nJOIN screen_orders s ON s.order_id = o.order_id\nWHERE o.status <> s.status;`,
-        explain: 'The synced_at value is the evidence: the screen row was last refreshed before the order shipped.' },
-      { id: 'mock-9', title: 'Planning exception', prompt: 'A planner asks which items will run out within a day. Return location_id, product_id, on_hand and daily_demand from inventory for rows where on_hand is lower than daily_demand.',
+      { id: 'mock-6', title: 'Investigate a mismatch', prompt: "The store says O1004 shipped, while the screen still shows Open. Support needs all cases like it.\n\nMatch orders to screen_orders by order_id. Where their statuses differ, return order_id, source_status, screen_status, and the screen synced_at timestamp.",
+        solution: `SELECT orders.order_id,\n       orders.status AS source_status,\n       screen_orders.status AS screen_status,\n       screen_orders.synced_at\nFROM orders\nJOIN screen_orders ON screen_orders.order_id = orders.order_id\nWHERE orders.status <> screen_orders.status;`,
+        explain: 'The older synced_at value is a clue. Check when the order shipped and whether its update was included in the sync.' },
+      { id: 'mock-9', title: 'Planning exception', prompt: "A planner wants to know which stock positions cover less than one day of demand.\n\nFrom inventory, keep rows where on_hand is below daily_demand. Return location_id, product_id, on_hand, and daily_demand.",
         solution: `SELECT location_id, product_id, on_hand, daily_demand\nFROM inventory\nWHERE on_hand < daily_demand;`,
         explain: 'One item: L01 / P03, 50 on hand against 80 a day. Add what you would check next: its lead time (5 days) and whether anything is on order (nothing).' },
-      { id: 'mock-7', title: 'Excel: conditional total', sheets: ['daily_plan'], prompt: 'Excel, Plan sheet: what is the total actual_units for product P02 across all locations? Decide the formula before you calculate.',
+      { id: 'mock-7', title: 'Excel: conditional total', sheets: ['daily_plan'], prompt: "A planner needs one total for product P02 across all locations.\n\nIn Excel, use Plan to sum actual_units for P02 and enter the total units.",
         answerSql: `SELECT SUM(actual_units) FROM daily_plan WHERE product_id = 'P02'`, answer: 1190,
         solution: `=SUMIFS(Plan!F:F, Plan!D:D, "P02")`, explain: 'One condition, so SUMIF would also do. Say which rows it covers: six rows across L01 and L02.' },
-      { id: 'mock-8', title: 'Excel: lookup and exceptions', sheets: ['daily_plan', 'products'], prompt: 'Excel, Plan sheet: after adding an exact-match lookup of product_name from Products, how many Plan rows have no match?',
-        answerSql: `SELECT COUNT(*) FROM daily_plan d LEFT JOIN products p ON p.product_id = d.product_id WHERE p.product_id IS NULL`, answer: 1,
+      { id: 'mock-8', title: 'Excel: lookup and exceptions', sheets: ['daily_plan', 'products'], prompt: "A planner wants to know how many plan rows have a product code missing from the catalog.\n\nUse an exact-match lookup to bring Products names into Plan. Enter the count of plan rows whose product ID has no match.",
+        answerSql: `SELECT COUNT(*) FROM daily_plan LEFT JOIN products ON products.product_id = daily_plan.product_id WHERE products.product_id IS NULL`, answer: 1,
         solution: `H2: =XLOOKUP(D2, Products!A:A, Products!B:B, "MISSING")     =COUNTIF(H:H, "MISSING")`, explain: 'One row, plan_id 18 with P99. In SQL this was LEFT JOIN + IS NULL.' }
     ],
     talk: [
@@ -1496,10 +1520,10 @@ J1:  =SUM(H2:H25) / SUM(F2:F25)      format as a percentage</pre>
   cheats: [
     ['Filter and sort', `SELECT TOP 10 order_id, order_date, status\nFROM orders\nWHERE location_id = 'L01'\n  AND order_date >= '2026-11-01'\n  AND order_date <  '2026-12-01'\nORDER BY order_date DESC;`],
     ['Total per group, then filter the totals', `SELECT order_id, COUNT(*) AS line_count, SUM(qty_ordered) AS total\nFROM order_lines\nWHERE qty_ordered > 0            -- rows\nGROUP BY order_id\nHAVING SUM(qty_ordered) > 50     -- groups\nORDER BY total DESC;`],
-    ['Join and keep every left row', `SELECT l.line_id, p.product_name\nFROM order_lines l\nLEFT JOIN products p\n  ON p.product_id = l.product_id;`],
-    ['Records with no match', `SELECT l.line_id, l.product_id\nFROM order_lines l\nLEFT JOIN products p ON p.product_id = l.product_id\nWHERE p.product_id IS NULL;`],
+    ['Join and keep every left row', `SELECT order_lines.line_id, products.product_name\nFROM order_lines\nLEFT JOIN products\n  ON products.product_id = order_lines.product_id;`],
+    ['Records with no match', `SELECT order_lines.line_id, order_lines.product_id\nFROM order_lines\nLEFT JOIN products ON products.product_id = order_lines.product_id\nWHERE products.product_id IS NULL;`],
     ['Duplicate check', `SELECT order_id, product_id, COUNT(*) AS copies\nFROM order_lines\nGROUP BY order_id, product_id\nHAVING COUNT(*) > 1;`],
-    ['Reconcile source against a copy', `WITH src AS (\n  SELECT order_id, SUM(qty_ordered) AS source_qty\n  FROM order_lines GROUP BY order_id\n)\nSELECT s.order_id, src.source_qty, s.total_qty\nFROM screen_orders s\nJOIN src ON src.order_id = s.order_id\nWHERE src.source_qty <> s.total_qty;`],
+    ['Reconcile source against a copy', `WITH source_totals AS (\n  SELECT order_id, SUM(qty_ordered) AS source_qty\n  FROM order_lines GROUP BY order_id\n)\nSELECT screen_orders.order_id, source_totals.source_qty, screen_orders.total_qty\nFROM screen_orders\nJOIN source_totals ON source_totals.order_id = screen_orders.order_id\nWHERE source_totals.source_qty <> screen_orders.total_qty;`],
     ['Label rows / count by condition', `SELECT location_id,\n       SUM(CASE WHEN status = 'Open' THEN 1 ELSE 0 END) AS open_orders\nFROM orders\nGROUP BY location_id;`],
     ['Safe ratio', `SELECT ROUND(100.0 * SUM(qty_shipped) / NULLIF(SUM(qty_ordered), 0), 1) AS fill_pct\nFROM order_lines\nWHERE qty_shipped IS NOT NULL;`],
     ['One row per key (dedupe / latest)', `WITH ranked AS (\n  SELECT *, ROW_NUMBER() OVER (\n           PARTITION BY order_id, product_id ORDER BY line_id) AS rn\n  FROM order_lines\n)\nSELECT * FROM ranked WHERE rn = 1;`]
@@ -1659,6 +1683,188 @@ const ENGINE = (() => {
 })();
 if (typeof module !== 'undefined') module.exports = ENGINE;
 </script>
+<script>/* References for the SQL shown in this course. Keep the original text intact for copying. */
+const SQL_REFERENCE = (() => {
+  const instructions = {
+    SELECT: 'Choose the columns and calculations to show in the result.',
+    FROM: 'Start with this table. Its rows are the starting point for the query.',
+    JOIN: 'Bring in another table. Each matching pair can produce a result row.',
+    INNER: 'Keep pairs that meet the ON condition. Unmatched rows drop out.',
+    LEFT: 'Keep every row from the table on the left. An unmatched row gets NULLs on the right.',
+    RIGHT: 'Keep every row from the table on the right.',
+    FULL: 'Keep matched rows and unmatched rows from either side.',
+    OUTER: 'Include unmatched rows from the side named by LEFT, RIGHT, or FULL.',
+    CROSS: 'Pair each row on the left with every row on the right.',
+    ON: 'Decide which rows can pair up in this join. With a LEFT JOIN, an unmatched left row still appears.',
+    WHERE: 'Filter the rows after FROM and JOIN. Only rows that pass this test remain.',
+    AND: 'Both conditions must be true.',
+    OR: 'Either condition can be true.',
+    NOT: 'Reverse the condition that follows.',
+    IN: 'Test whether the value is in the list or subquery.',
+    BETWEEN: 'Test whether the value is between the two bounds, including both ends.',
+    LIKE: 'Match text to a pattern. A percent sign can stand for any number of characters.',
+    IS: 'Use IS NULL or IS NOT NULL to test whether a value is missing.',
+    NULL: 'A missing or unknown value.',
+    GROUP: 'GROUP BY collects rows into groups. A grouped result has one row per group.',
+    HAVING: 'Filter groups after their totals or counts have been calculated.',
+    ORDER: 'ORDER BY sorts the result or sets the order inside a window.',
+    BY: 'Names the columns to group, sort, or partition by.',
+    ASC: 'Sort from low to high.',
+    DESC: 'Sort from high to low.',
+    DISTINCT: 'Keep one copy of each distinct result row or value.',
+    TOP: 'Limit the number of rows returned. Use ORDER BY to choose which rows come first.',
+    UNION: 'Stack the rows from two queries with matching output columns. Plain UNION removes duplicate rows.',
+    ALL: 'With UNION, keep every row, including repeats.',
+    CASE: 'Return a value based on the first WHEN condition that is true.',
+    WHEN: 'Test a condition inside CASE.',
+    THEN: 'Return this value if the WHEN condition is true.',
+    ELSE: 'Return this fallback value if no WHEN condition is true.',
+    END: 'Finish the CASE expression.',
+    AS: 'Give an output column a label, or introduce the query that defines a named step.',
+    WITH: 'Define a named query step that the rest of this statement can use.',
+    OVER: 'Calculate across related rows while keeping the detail rows.',
+    PARTITION: 'PARTITION BY specifies which rows belong to the same window group.',
+    COUNT: 'Count rows with COUNT(*) or count non-NULL values with COUNT(column).',
+    SUM: 'Add the values in a column or expression.',
+    AVG: 'Calculate the average of the values that are present.',
+    MIN: 'Find the smallest value.',
+    MAX: 'Find the largest value.',
+    ISNULL: 'Use the second value when the first value is NULL.',
+    COALESCE: 'Return the first value in the list that is present.',
+    NULLIF: 'Return NULL when the two values are equal. This can guard against division by zero.',
+    ROUND: 'Round a number to the specified number of decimal places.',
+    ABS: 'Take the magnitude of a number, so positive and negative differences add together.',
+    TRIM: 'Remove spaces from the start and end of text.',
+    LTRIM: 'Remove leading spaces.',
+    RTRIM: 'Remove trailing spaces.',
+    UPPER: 'Convert the text to uppercase.',
+    LOWER: 'Convert the text to lowercase.',
+    LEN: 'Count characters. SQL Server LEN excludes trailing spaces.',
+    CONCAT: 'Put the supplied text values together.',
+    DATEDIFF: 'Count how many boundaries of the chosen date part the dates cross.',
+    DATEADD: 'Move a date forward or back by a specified amount.',
+    GETDATE: 'Get the current date and time. The course uses a fixed time for practice.',
+    CAST: 'Convert a value to a different data type.',
+    ROW_NUMBER: 'Number the rows within each group in the specified order.',
+    YEAR: 'Get the year from a date.',
+    MONTH: 'Get the month from a date.',
+    DAY: 'Get the day of the month from a date. Inside DATEDIFF or DATEADD, day is the unit.'
+  };
+
+  const dataTypes = new Set(['DATE', 'DATETIME', 'INT', 'INTEGER', 'DECIMAL', 'FLOAT', 'VARCHAR', 'NVARCHAR', 'BIT']);
+
+  const fieldNotes = {
+    product_id: 'The product code.',
+    raw_product_id: 'The product code as the feed received it. It may contain spaces or inconsistent casing.',
+    product_name: 'The readable name of a product.',
+    location_id: 'The code for a distribution center.',
+    order_id: 'The order number.',
+    line_id: 'The unique number for one order line.',
+    plan_id: 'The unique number for one daily plan row.',
+    qty_ordered: 'The units ordered on this line.',
+    qty_shipped: 'The units shipped on this line. NULL means no quantity was recorded.',
+    status: 'The order status recorded by this table.',
+    total_qty: 'The total quantity recorded by the ordering screen.',
+    synced_at: 'The last time this screen row was refreshed.',
+    plan_date: 'The day covered by the plan.',
+    snapshot_date: 'The day the stock levels were captured.',
+    forecast_units: 'The quantity the plan expected to sell.',
+    actual_units: 'The quantity recorded as sold. NULL means the actual is missing.',
+    on_hand: 'Units currently in stock at the location.',
+    on_order: 'Units already on order for the location.',
+    daily_demand: 'Expected demand in units per day.',
+    expected_date: 'The date the receipt was due.',
+    received_date: 'The date the receipt arrived, if recorded.'
+  };
+
+  const steps = {
+    source_totals: { columns: ['order_id', 'source_qty'], grain: 'One row per order. Totals come from order_lines.' },
+    average_line: { columns: ['avg_qty'], grain: 'One row with the average quantity across order_lines.' },
+    ranked: { columns: ['order_id', 'line_id', 'product_id', 'qty_ordered', 'location_id', 'receipt_id', 'expected_date', 'rn'], grain: 'One row per record from the named step above, with its row number.' }
+  };
+
+  function tableNote(name, schema) {
+    return { kind: 'table', label: 'Table or query step', detail: schema[name].grain };
+  }
+
+  function columnNote(table, name, schema) {
+    const meta = schema[table];
+    const type = meta.types?.[meta.columns.indexOf(name)] ?? '';
+    const target = { product_id: 'products', location_id: 'locations', order_id: 'orders' }[name];
+    let detail = fieldNotes[name] ?? '';
+    if (type.includes('PRIMARY KEY')) detail += ' Primary key for this table.';
+    else if (type && target && table !== target) detail += ' Refers to a record in ' + target + '.';
+    if (table === 'inventory' && ['product_id', 'location_id', 'snapshot_date'].includes(name)) {
+      detail += ' Part of the inventory key, together with the other two fields.';
+    }
+    return { kind: 'column', label: 'Column from ' + table, detail: [detail.trim(), meta.grain].filter(Boolean).join(' ') };
+  }
+
+  function analyze(sql, tables) {
+    const schema = { ...tables, ...steps };
+    const tokens = (sql.match(/--[^\n]*|'(?:''|[^'\n])*'|[a-z_][a-z_0-9]*|\d+(?:\.\d+)?|<>|>=|<=|!=|[^\S\n]+|\n|./gi) ?? []).map(text => ({ text }));
+    const words = tokens.filter(token => token.text.trim() && !token.text.startsWith('--'));
+    const newScope = parent => ({ parent, sources: new Set(), outputs: new Set() });
+    const scopes = new Map();
+    const groups = [];
+    let scope = newScope(null);
+
+    words.forEach((token, index) => {
+      const word = token.text.toUpperCase();
+      const next = words[index + 1]?.text;
+      const afterNext = words[index + 2]?.text;
+      if (word === '(') {
+        groups.push(scope);
+        if (['SELECT', 'WITH'].includes(next?.toUpperCase())) scope = newScope(scope);
+      }
+      if (word === 'UNION') scope = newScope(scope.parent);
+      scopes.set(token, scope);
+      if (['FROM', 'JOIN', 'WITH'].includes(word) && Object.hasOwn(schema, next)) {
+        words[index + 1].note = tableNote(next, schema);
+        if (word !== 'WITH') scope.sources.add(next);
+      }
+      if (word === 'AS' && /^[a-z_]\w*$/i.test(next ?? '') && afterNext !== '(' && !dataTypes.has(next.toUpperCase())) {
+        words[index + 1].note = { kind: 'column', label: 'Result column', detail: 'This is the heading for the value or calculation immediately before AS.' };
+        scope.outputs.add(next);
+      }
+      if (word === ')') scope = groups.pop() ?? scope;
+    });
+
+    words.forEach((token, index) => {
+      const word = token.text;
+      const before = words[index - 1]?.text;
+      const after = words[index + 1]?.text;
+      if (token.note) return;
+      if (after === '.' && Object.hasOwn(schema, word)) {
+        token.note = tableNote(word, schema);
+      } else if (before === '.' && Object.hasOwn(schema, words[index - 2]?.text)) {
+        token.note = columnNote(words[index - 2].text, word, schema);
+      } else if (dataTypes.has(word.toUpperCase()) && before?.toUpperCase() === 'AS') {
+        token.note = { kind: 'instruction', label: 'Data type', detail: 'CAST converts the expression to this type.' };
+      } else if (Object.hasOwn(instructions, word.toUpperCase())) {
+        token.note = { kind: 'instruction', label: 'SQL instruction', detail: instructions[word.toUpperCase()] };
+      } else if (/^[a-z_]\w*$/i.test(word)) {
+        for (let current = scopes.get(token); current; current = current.parent) {
+          const sources = [...current.sources].filter(name => schema[name].columns.includes(word));
+          if (sources.length === 1) {
+            token.note = columnNote(sources[0], word, schema);
+            break;
+          }
+          if (current.outputs.has(word)) {
+            token.note = { kind: 'column', label: 'Result column', detail: 'A column label defined by this query.' };
+            break;
+          }
+          if (sources.length > 1) break;
+        }
+      }
+    });
+    return tokens;
+  }
+
+  return { analyze };
+})();
+if (typeof module !== 'undefined') module.exports = SQL_REFERENCE;
+</script>
 <script>(() => {
   'use strict';
   const L = COURSE.lessons, KEY = 'havi-sql-v2';
@@ -1674,12 +1880,135 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const app = document.getElementById('app');
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  const WORDS = /\b(SELECT|DISTINCT|TOP|FROM|WHERE|AND|OR|NOT|IN|BETWEEN|LIKE|IS|NULL|AS|ON|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|JOIN|GROUP|BY|HAVING|ORDER|ASC|DESC|UNION|ALL|CASE|WHEN|THEN|ELSE|END|WITH|OVER|PARTITION)\b/g;
-  const hl = sql => sql.split(/('(?:''|[^'])*'|--[^\n]*)/).map((p, i) => i % 2 ? `<span class="${p[0] === '-' ? 'cm' : 'st'}">${esc(p)}</span>` : esc(p).replace(WORDS, '<b>$1</b>')).join('');
-  const code = sql => `<pre class="code">${hl(sql)}</pre>`;
+  function code(sql, other) {
+    const raw = sql.split('\n');
+    const matching = other && new Set(other.split('\n').map(line => line.trim()));
+    const lines = [''];
+    let tabIndex = 0;
+    for (const { text, note } of SQL_REFERENCE.analyze(sql, DATA)) {
+      if (text === '\n') {
+        lines.push('');
+        continue;
+      }
+      const plain = esc(text);
+      if (note) {
+        lines[lines.length - 1] += `<button type="button" class="sql-token sql-${note.kind}" tabindex="${tabIndex}" data-sql-label="${esc(note.label)}" data-sql-note="${esc(note.detail)}">${plain}</button>`;
+        tabIndex = -1;
+      } else if (text.startsWith("'") || text.startsWith('--')) {
+        const style = text.startsWith('--') ? 'cm' : 'st';
+        lines[lines.length - 1] += `<span class="${style}">${plain}</span>`;
+      } else {
+        lines[lines.length - 1] += plain;
+      }
+    }
+    const html = lines.map((line, i) => matching && !matching.has(raw[i].trim()) ? `<span class="chg">${line}</span>` : line).join('\n');
+    return `<pre class="code sql-code">${html}</pre>`;
+  }
+
+  const referenceLegend = `<div class="sql-legend"><span class="sql-table">Table</span><span class="sql-column">Column</span><span class="sql-instruction">SQL instruction</span><span>Hover or tap a term for help. With a keyboard, use Tab and the arrow keys.</span></div>`;
   const keyP = s => s.key ? `<p class="key">${esc(s.key)}</p>` : '';
-  const lineSet = sql => new Set(sql.split('\n').map(x => x.trim()));
-  const codeDiff = (sql, other) => { const o = lineSet(other), raw = sql.split('\n'); return `<pre class="code">${hl(sql).split('\n').map((h, i) => o.has(raw[i].trim()) ? h : `<span class="chg">${h}</span>`).join('\n')}</pre>`; };
+  const withReferences = html => html.replace(/<pre class="code">(SELECT[\s\S]*?)<\/pre>/g, (_, sql) => code(sql));
+
+  const tooltip = document.createElement('div');
+  tooltip.className = 'sql-tooltip';
+  tooltip.id = 'sql-tooltip';
+  tooltip.setAttribute('role', 'tooltip');
+  tooltip.hidden = true;
+  const tooltipLabel = document.createElement('strong');
+  const tooltipText = document.createElement('span');
+  tooltip.append(tooltipLabel, tooltipText);
+  document.body.append(tooltip);
+  let referenceToken = null;
+  let referencePinned = false;
+  let referenceTimer;
+
+  function hideReference() {
+    clearTimeout(referenceTimer);
+    referenceToken?.removeAttribute('aria-describedby');
+    referenceToken = null;
+    referencePinned = false;
+    tooltip.hidden = true;
+  }
+
+  function positionReference() {
+    if (!referenceToken) return;
+    const target = referenceToken.getBoundingClientRect();
+    const codeBlock = referenceToken.closest('.sql-code').getBoundingClientRect();
+    if (target.bottom < 0 || target.top > innerHeight || target.right < codeBlock.left || target.left > codeBlock.right) {
+      hideReference();
+      return;
+    }
+    const width = tooltip.offsetWidth;
+    const height = tooltip.offsetHeight;
+    const left = Math.max(8, Math.min(target.left, innerWidth - width - 8));
+    const below = target.bottom + 6;
+    const top = below + height < innerHeight - 8 ? below : Math.max(8, target.top - height - 6);
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+  }
+
+  function showReference(token, pin = false) {
+    clearTimeout(referenceTimer);
+    if (referenceToken !== token) referenceToken?.removeAttribute('aria-describedby');
+    referenceToken = token;
+    referencePinned = pin;
+    tooltipLabel.textContent = token.dataset.sqlLabel;
+    tooltipText.textContent = token.dataset.sqlNote;
+    token.setAttribute('aria-describedby', tooltip.id);
+    tooltip.hidden = false;
+    positionReference();
+  }
+
+  app.addEventListener('pointerover', event => {
+    const token = event.target.closest('.sql-token');
+    if (token && event.pointerType !== 'touch' && !referencePinned) showReference(token);
+  });
+  app.addEventListener('pointerout', event => {
+    if (!referenceToken || referencePinned || referenceToken === document.activeElement) return;
+    if (event.target.closest('.sql-token') !== referenceToken || tooltip.contains(event.relatedTarget)) return;
+    referenceTimer = setTimeout(hideReference, 160);
+  });
+  tooltip.addEventListener('pointerenter', () => clearTimeout(referenceTimer));
+  tooltip.addEventListener('pointerleave', () => {
+    if (!referencePinned && referenceToken !== document.activeElement) hideReference();
+  });
+  app.addEventListener('focusin', event => {
+    const token = event.target.closest('.sql-token');
+    if (!token) return;
+    const previous = token.closest('.sql-code').querySelector('.sql-token[tabindex="0"]');
+    if (previous) previous.tabIndex = -1;
+    token.tabIndex = 0;
+    showReference(token);
+  });
+  app.addEventListener('focusout', event => {
+    if (event.target === referenceToken) hideReference();
+  });
+  app.addEventListener('click', event => {
+    const token = event.target.closest('.sql-token');
+    if (!token) {
+      if (!tooltip.contains(event.target)) hideReference();
+      return;
+    }
+    if (token === referenceToken && referencePinned) hideReference();
+    else showReference(token, true);
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && referenceToken) {
+      hideReference();
+      event.stopImmediatePropagation();
+      return;
+    }
+    const token = event.target.closest?.('.sql-token');
+    if (!token || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    const tokens = [...token.closest('.sql-code').querySelectorAll('.sql-token')];
+    const index = tokens.indexOf(token);
+    const next = { ArrowLeft: index - 1, ArrowRight: index + 1, Home: 0, End: tokens.length - 1 }[event.key];
+    event.preventDefault();
+    tokens[next]?.focus();
+  });
+  window.addEventListener('scroll', positionReference, { capture: true, passive: true });
+  window.addEventListener('resize', positionReference);
+
   const fx = f => `<pre class="code fx">${esc(f)}</pre>`;
   const colName = i => String.fromCharCode(65 + i);
   const tsv = t => [t.columns, ...t.rows].map(r => r.map(v => v ?? '').join('\t')).join('\n');
@@ -1712,22 +2041,34 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const kind = { text: 'Explain', run: 'Example', compare: 'Compare', try: 'Practice', quiz: 'Check', sheet: 'Data' };
   function stepHtml(l, s, i) {
     const head = `<div class="kind k-${s.t}"><b>${L.indexOf(l) + 1}.${i + 1}</b>${kind[s.t]}</div>`;
-    if (s.t === 'text') return `<section class="step plain" id="s${i}">${head}<h2>${esc(s.h)}</h2>${keyP(s)}${s.html}</section>`;
+    if (s.t === 'text') return `<section class="step plain" id="s${i}">${head}<h2>${esc(s.h)}</h2>${keyP(s)}${withReferences(s.html)}</section>`;
     if (s.t === 'sheet') { const t = DATA[s.table]; return `<section class="step" id="s${i}">${head}<h2>${esc(s.h)}</h2><div class="tablewrap sheet"><table><thead><tr><th></th>${t.columns.map((c, n) => `<th>${colName(n)}</th>`).join('')}</tr></thead><tbody><tr><th>1</th>${t.columns.map(c => `<td class="hdr">${esc(c)}</td>`).join('')}</tr>${t.rows.map((r, n) => `<tr><th>${n + 2}</th>${r.map(v => `<td>${v === null ? '' : esc(v).replace(/ /g, '<span class="sp">·</span>')}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="bar"><button class="btn ghost" data-act="copy" data-v="${s.table}">Copy ${esc(s.sheet)} for Excel</button><span class="fine">Paste into cell A1. Dots mark spaces; empty cells are blanks.</span></div></section>`; }
-    if (s.t === 'run') return `<section class="step" id="s${i}">${head}<h2>${esc(s.h)}</h2>${keyP(s)}${code(s.sql)}${live(s.sql)}<p class="note">${s.note}</p><button class="link" data-act="pad" data-sql="${esc(s.sql)}">Change it and re-run</button></section>`;
-    if (s.t === 'compare') return `<section class="step compare" id="s${i}">${head}<h2>${esc(s.h)}</h2><p>${esc(s.intro)}</p><div class="sides">${['a', 'b'].map(k => `<div class="side side-${k}"><div class="sidelabel"><span>${k.toUpperCase()}</span>${esc(s[k].label)}</div>${s[k].sql ? `${s[k === 'a' ? 'b' : 'a'].sql ? codeDiff(s[k].sql, s[k === 'a' ? 'b' : 'a'].sql) + liveDiff(s[k].sql, s[k === 'a' ? 'b' : 'a'].sql) : code(s[k].sql) + live(s[k].sql)}<button class="link" data-act="pad" data-sql="${esc(s[k].sql)}">Change it and re-run</button>` : `${fx(s[k].formula)}<p class="shows">${esc(s[k].shows)}</p>`}</div>`).join('')}</div><div class="verdict"><div class="vlabel">What changed</div><p>${esc(s.diff)}</p></div><div class="which"><div class="vlabel">Use which</div><ul>${s.use.map(u => `<li>${esc(u)}</li>`).join('')}</ul></div></section>`;
+    if (s.t === 'run') return `<section class="step" id="s${i}">${head}<h2>${esc(s.h)}</h2>${keyP(s)}<p class="note">${s.note}</p>${code(s.sql)}${live(s.sql)}<button class="link" data-act="pad" data-sql="${esc(s.sql)}">Change it and re-run</button></section>`;
+    if (s.t === 'compare') return `<section class="step compare" id="s${i}">
+      ${head}<h2>${esc(s.h)}</h2><p>${esc(s.intro)}</p>
+      <div class="verdict"><div class="vlabel">What changed</div><p>${esc(s.diff)}</p></div>
+      <div class="which"><div class="vlabel">When to use it</div><ul>${s.use.map(u => `<li>${esc(u)}</li>`).join('')}</ul></div>
+      <div class="sides">${compareSide('a', s.a, s.b)}${compareSide('b', s.b, s.a)}</div>
+    </section>`;
     if (s.t === 'quiz') {
       const id = `${l.id}-q${i}`, pick = S.quiz[id];
       return `<section class="step" id="s${i}">${head}<h2>${esc(s.q)}</h2><div class="opts">${s.options.map((o, n) => `<button class="opt ${pick === n ? (n === s.correct ? 'right' : 'wrong') : ''}" data-act="quiz" data-id="${id}" data-l="${l.id}" data-i="${i}" data-n="${n}">${esc(o)}</button>`).join('')}</div>${pick != null ? `<div class="msg ${pick === s.correct ? 'good' : 'bad'}">${pick === s.correct ? 'Correct. ' : 'Not that one. '}${esc(s.why)}</div>` : ''}</section>`;
     }
     return `<section class="step" id="s${i}">${head}${exercise(s, true)}</section>`;
   }
+  function compareSide(key, example, other) {
+    const result = example.sql
+      ? `${code(example.sql, other.sql)}${other.sql ? liveDiff(example.sql, other.sql) : live(example.sql)}
+        <button class="link" data-act="pad" data-sql="${esc(example.sql)}">Change it and re-run</button>`
+      : `${fx(example.formula)}<p class="shows">${esc(example.shows)}</p>`;
+    return `<div class="side side-${key}"><div class="sidelabel"><span>${key.toUpperCase()}</span>${esc(example.label)}</div>${result}</div>`;
+  }
   function exercise(s, hints) {
     const n = S.hints[s.id] || 0, o = out[s.id], tried = !!o || S.done[s.id];
-    if (s.answerSql) return `<div class="ex ${S.done[s.id] ? 'done' : ''}" id="ex-${s.id}"><h2>${S.done[s.id] ? '<span class="tick">✓</span> ' : ''}${esc(s.title)}</h2><p>${esc(s.prompt)}</p><div class="chips"><span class="fine">Data:</span>${s.sheets.map(t => `<button class="chip" data-act="table" data-v="${t}">${t}</button>`).join('')}</div>
+    if (s.answerSql) return `<div class="ex ${S.done[s.id] ? 'done' : ''}" id="ex-${s.id}"><h2>${S.done[s.id] ? '<span class="tick">✓</span> ' : ''}${esc(s.title)}</h2><p class="exercise-prompt">${esc(s.prompt)}</p><div class="chips"><span class="fine">Data:</span>${s.sheets.map(t => `<button class="chip" data-act="table" data-v="${t}">${t}</button>`).join('')}</div>
 <div class="bar"><input class="field" id="ed-${s.id}" data-draft="${s.id}" value="${esc(S.drafts[s.id] ?? '')}" placeholder="Your answer" autocomplete="off" autocapitalize="off" aria-label="Your answer for ${esc(s.title)}"><button class="btn" data-act="answer" data-id="${s.id}">Check</button>${hints ? `<button class="btn ghost" data-act="hint" data-id="${s.id}">${n ? `Next hint (${Math.min(n, s.hints.length)}/${s.hints.length})` : 'Hint'}</button>` : ''}${hints || tried ? `<button class="link" data-act="solution" data-id="${s.id}">${S.shown[s.id] ? 'Hide formula' : 'Show formula'}</button>` : ''}</div>
 ${hints && n ? `<div class="hint">${s.hints.slice(0, n).map(h => `<p>${esc(h)}</p>`).join('')}</div>` : ''}${S.shown[s.id] ? `<div class="hint">${fx(s.solution)}<p>${esc(s.explain)}</p></div>` : ''}<div class="output">${o ? `<div class="msg ${o.pass ? 'good' : 'bad'}">${o.pass ? 'Correct. ' + esc(s.explain) : 'Not yet. Check which rows your formula includes, and whether a blank was counted as zero.'}</div>` : ''}</div></div>`;
-    return `<div class="ex ${S.done[s.id] ? 'done' : ''}" id="ex-${s.id}"><h2>${S.done[s.id] ? '<span class="tick">✓</span> ' : ''}${esc(s.title)}</h2><p>${esc(s.prompt)}</p><div class="chips"><span class="fine">Tables:</span>${chips(s.prompt + ' ' + s.solution)}</div>
+    return `<div class="ex ${S.done[s.id] ? 'done' : ''}" id="ex-${s.id}"><h2>${S.done[s.id] ? '<span class="tick">✓</span> ' : ''}${esc(s.title)}</h2><p class="exercise-prompt">${esc(s.prompt)}</p><div class="chips"><span class="fine">Tables:</span>${chips(s.prompt + ' ' + s.solution)}</div>
 <textarea class="editor" id="ed-${s.id}" data-draft="${s.id}" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" rows="${Math.max(5, (S.drafts[s.id] ?? s.starter ?? '').split('\n').length + 1)}" aria-label="Your query for ${esc(s.title)}">${esc(S.drafts[s.id] ?? s.starter ?? 'SELECT ')}</textarea>
 <div class="bar"><button class="btn" data-act="check" data-id="${s.id}">Run and check</button>${hints ? `<button class="btn ghost" data-act="hint" data-id="${s.id}">${n ? `Next hint (${Math.min(n, s.hints.length)}/${s.hints.length})` : 'Hint'}</button>` : ''}${hints || tried ? `<button class="link" data-act="solution" data-id="${s.id}">${S.shown[s.id] ? 'Hide answer' : 'Show answer'}</button>` : '<span class="fine">Answer unlocks after your first run.</span>'}</div>
 ${hints && n ? `<div class="hint">${s.hints.slice(0, n).map(h => `<p>${esc(h)}</p>`).join('')}</div>` : ''}${S.shown[s.id] ? `<div class="hint">${code(s.solution)}<p>${esc(s.explain)}</p></div>` : ''}<div class="output">${o ? outHtml(o, s) : ''}</div></div>`;
@@ -1744,10 +2085,10 @@ ${hints && n ? `<div class="hint">${s.hints.slice(0, n).map(h => `<p>${esc(h)}</
     return `<div class="ladder" aria-label="Clauses covered so far">${COURSE.ladder.map(c => { const li = L.findIndex(x => x.id === c.l), st = li < at ? 'known' : li === at ? 'new' : 'later'; return `<div class="rung ${st}"><code>${c.k}</code><span>${esc(c.d)}</span><em title="Run order">${c.order}</em></div>`; }).join('')}<p class="fine">Lit rows are clauses you have covered. The number is the order the database runs them in.</p></div>`;
   }
   const coreTable = l => `<div class="tablewrap"><table class="coretable"><thead><tr><th>Term</th><th>What it does</th><th>Why it matters</th></tr></thead><tbody>${l.core.map(r => `<tr><td><strong>${esc(r[0])}</strong></td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join('')}</tbody></table></div>`;
-  const coreHtml = l => `<section class="core"><h2>The core ${l.core.length}</h2><p class="fine">Read this table first. The rest of the page shows each of these on real data, then has you use it.</p>${coreTable(l)}<div class="tip"><span>Interview tip</span>${esc(l.tip)}</div><div class="goal"><span>By the end</span>${esc(l.outcome)}</div></section>`;
+  const coreHtml = l => `<section class="core"><details class="terms"><summary>Reference terms</summary>${coreTable(l)}</details><div class="tip"><span>Interview tip</span>${esc(l.tip)}</div><div class="goal"><span>By the end</span>${esc(l.outcome)}</div></section>`;
   function lessonView(l) {
     const i = L.indexOf(l), next = L[i + 1];
-    return `<article class="lesson"><header class="lhead"><div class="chapter ${l.excel ? 'xl' : ''}"><div class="chapnum">${l.track || (l.excel ? 'Excel' : 'SQL')} · Chapter ${i + 1} of ${L.length} · about ${l.mins} min</div><h1>${esc(l.title)}</h1><p>${esc(l.builds)}</p><button class="link" data-go="home">← All chapters</button></div>${coreHtml(l)}
+    return `<article class="lesson"><header class="lhead"><div class="chapter ${l.excel ? 'xl' : ''}"><div class="chapnum">${l.track || (l.excel ? 'Excel' : 'SQL')} · Chapter ${i + 1} of ${L.length} · about ${l.mins} min</div><h1>${esc(l.title)}</h1><p>${esc(l.builds)}</p><button class="link" data-go="home">← All chapters</button></div>${l.track === "Kinaxis" ? "" : referenceLegend}${coreHtml(l)}
 <details class="outline"><summary>On this page · ${doneIn(l)} of ${items(l).length} checks done</summary><ol>${l.steps.map((s, n) => `<li><button class="link" data-act="jump" data-v="s${n}"><span class="kind k-${s.t}">${kind[s.t]}</span> ${esc(s.h || s.title || s.q)}</button></li>`).join('')}</ol></details></header>
 ${l.steps.map((s, n) => stepHtml(l, s, n)).join('')}
 <footer class="lfoot">${pct(l) === 100 ? '<div class="msg good">Lesson complete.</div>' : `<p class="fine">${doneIn(l)} of ${items(l).length} checks done on this page. You can move on and come back.</p>`}${next ? `<button class="btn big" data-go="l-${next.id}">Next: ${esc(next.title)} →</button>` : '<button class="btn big" data-go="mock">Go to the mock interview →</button>'}</footer></article>`;
@@ -1769,7 +2110,7 @@ ${l.steps.map((s, n) => stepHtml(l, s, n)).join('')}
     return `<article class="lesson"><header class="lhead"><div class="crumb"><button class="link" data-go="home">All lessons</button> · Reference</div><h1>Cheat sheet</h1><p class="lead">The SQL patterns, the SQL Server differences, the Excel formulas, and every comparison from the lessons on one page.</p></header>
 <section class="step"><h2>Run order</h2><p><code>FROM → JOIN → WHERE → GROUP BY → HAVING → SELECT → ORDER BY</code></p><p>Row conditions go in WHERE. Total conditions go in HAVING. Aliases made in SELECT only work in ORDER BY.</p></section>
 <section class="step"><h2>Every core term</h2>${L.map((l, i) => `<h3>${i + 1}. ${esc(l.title)}</h3>${coreTable(l)}`).join('')}</section>
-<section class="step"><h2>Nine patterns</h2>${COURSE.cheats.map(([h, sql]) => `<h3>${esc(h)}</h3>${code(sql)}`).join('')}</section>
+<section class="step"><h2>Nine patterns</h2>${referenceLegend}${COURSE.cheats.map(([h, sql]) => `<h3>${esc(h)}</h3>${code(sql)}`).join('')}</section>
 <section class="step"><h2>SQL Server compared with other databases</h2><div class="tablewrap"><table><thead><tr><th>Task</th><th>SQL Server</th><th>Elsewhere</th></tr></thead><tbody>${COURSE.dialect.map(r => `<tr><td>${esc(r[0])}</td><td><code>${esc(r[1])}</code></td><td>${esc(r[2])}</td></tr>`).join('')}</tbody></table></div></section>
 <section class="step"><h2>Excel formulas</h2><div class="tablewrap"><table><tbody>${COURSE.excel.map(r => `<tr><td>${esc(r[0])}</td><td><code>${esc(r[1])}</code></td></tr>`).join('')}</tbody></table></div><p>Excel ignores case when matching, never ignores spaces, and treats a blank as 0 in arithmetic.</p></section>
 <section class="step"><h2>This versus that</h2>${L.map(l => l.steps.filter(s => s.t === 'compare').map(s => `<div class="vs"><h3>${esc(s.h)}</h3><p>${esc(s.diff)}</p><ul>${s.use.map(u => `<li>${esc(u)}</li>`).join('')}</ul><button class="link" data-go="l-${l.id}">See it in lesson ${L.indexOf(l) + 1}</button></div>`).join('')).join('')}</section>
@@ -1787,6 +2128,7 @@ ${l.steps.map((s, n) => stepHtml(l, s, n)).join('')}
   /* ---------- render and routing ---------- */
   const route = () => (location.hash || '#home').slice(1);
   function render(keepScroll) {
+    hideReference();
     const y = window.scrollY, r = route(), l = L.find(x => 'l-' + x.id === r);
     const total = L.reduce((n, x) => n + items(x).length, 0) + COURSE.mock.tasks.length, done = L.reduce((n, x) => n + doneIn(x), 0) + mockDone();
     app.innerHTML = `<nav class="top"><button class="brand" data-go="home">HAVI SQL prep</button><div class="meter" title="${done} of ${total} checks done"><span style="width:${Math.round(100 * done / total)}%"></span></div><button class="navbtn" data-act="theme" aria-label="Switch between light and dark">${isDark() ? '☀ Light' : '☾ Dark'}</button><button class="navbtn ${r === 'mock' ? 'on' : ''}" data-go="mock">Mock</button><button class="navbtn ${r === 'cheats' ? 'on' : ''}" data-go="cheats">Cheat sheet</button></nav><main id="main">${l ? lessonView(l) : r === 'mock' ? mockView() : r === 'cheats' ? cheatsView() : homeView()}</main><div class="dock"><button class="btn" data-act="drawer" data-v="tables">Tables</button><button class="btn" data-act="drawer" data-v="pad">Scratchpad</button></div><div id="drawer">${drawerHtml()}</div>`;

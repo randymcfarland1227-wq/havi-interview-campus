@@ -13,12 +13,135 @@
   const app = document.getElementById('app');
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  const WORDS = /\b(SELECT|DISTINCT|TOP|FROM|WHERE|AND|OR|NOT|IN|BETWEEN|LIKE|IS|NULL|AS|ON|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|JOIN|GROUP|BY|HAVING|ORDER|ASC|DESC|UNION|ALL|CASE|WHEN|THEN|ELSE|END|WITH|OVER|PARTITION)\b/g;
-  const hl = sql => sql.split(/('(?:''|[^'])*'|--[^\n]*)/).map((p, i) => i % 2 ? `<span class="${p[0] === '-' ? 'cm' : 'st'}">${esc(p)}</span>` : esc(p).replace(WORDS, '<b>$1</b>')).join('');
-  const code = sql => `<pre class="code">${hl(sql)}</pre>`;
+  function code(sql, other) {
+    const raw = sql.split('\n');
+    const matching = other && new Set(other.split('\n').map(line => line.trim()));
+    const lines = [''];
+    let tabIndex = 0;
+    for (const { text, note } of SQL_REFERENCE.analyze(sql, DATA)) {
+      if (text === '\n') {
+        lines.push('');
+        continue;
+      }
+      const plain = esc(text);
+      if (note) {
+        lines[lines.length - 1] += `<button type="button" class="sql-token sql-${note.kind}" tabindex="${tabIndex}" data-sql-label="${esc(note.label)}" data-sql-note="${esc(note.detail)}">${plain}</button>`;
+        tabIndex = -1;
+      } else if (text.startsWith("'") || text.startsWith('--')) {
+        const style = text.startsWith('--') ? 'cm' : 'st';
+        lines[lines.length - 1] += `<span class="${style}">${plain}</span>`;
+      } else {
+        lines[lines.length - 1] += plain;
+      }
+    }
+    const html = lines.map((line, i) => matching && !matching.has(raw[i].trim()) ? `<span class="chg">${line}</span>` : line).join('\n');
+    return `<pre class="code sql-code">${html}</pre>`;
+  }
+
+  const referenceLegend = `<div class="sql-legend"><span class="sql-table">Table</span><span class="sql-column">Column</span><span class="sql-instruction">SQL instruction</span><span>Hover or tap a term for help. With a keyboard, use Tab and the arrow keys.</span></div>`;
   const keyP = s => s.key ? `<p class="key">${esc(s.key)}</p>` : '';
-  const lineSet = sql => new Set(sql.split('\n').map(x => x.trim()));
-  const codeDiff = (sql, other) => { const o = lineSet(other), raw = sql.split('\n'); return `<pre class="code">${hl(sql).split('\n').map((h, i) => o.has(raw[i].trim()) ? h : `<span class="chg">${h}</span>`).join('\n')}</pre>`; };
+  const withReferences = html => html.replace(/<pre class="code">(SELECT[\s\S]*?)<\/pre>/g, (_, sql) => code(sql));
+
+  const tooltip = document.createElement('div');
+  tooltip.className = 'sql-tooltip';
+  tooltip.id = 'sql-tooltip';
+  tooltip.setAttribute('role', 'tooltip');
+  tooltip.hidden = true;
+  const tooltipLabel = document.createElement('strong');
+  const tooltipText = document.createElement('span');
+  tooltip.append(tooltipLabel, tooltipText);
+  document.body.append(tooltip);
+  let referenceToken = null;
+  let referencePinned = false;
+  let referenceTimer;
+
+  function hideReference() {
+    clearTimeout(referenceTimer);
+    referenceToken?.removeAttribute('aria-describedby');
+    referenceToken = null;
+    referencePinned = false;
+    tooltip.hidden = true;
+  }
+
+  function positionReference() {
+    if (!referenceToken) return;
+    const target = referenceToken.getBoundingClientRect();
+    const codeBlock = referenceToken.closest('.sql-code').getBoundingClientRect();
+    if (target.bottom < 0 || target.top > innerHeight || target.right < codeBlock.left || target.left > codeBlock.right) {
+      hideReference();
+      return;
+    }
+    const width = tooltip.offsetWidth;
+    const height = tooltip.offsetHeight;
+    const left = Math.max(8, Math.min(target.left, innerWidth - width - 8));
+    const below = target.bottom + 6;
+    const top = below + height < innerHeight - 8 ? below : Math.max(8, target.top - height - 6);
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+  }
+
+  function showReference(token, pin = false) {
+    clearTimeout(referenceTimer);
+    if (referenceToken !== token) referenceToken?.removeAttribute('aria-describedby');
+    referenceToken = token;
+    referencePinned = pin;
+    tooltipLabel.textContent = token.dataset.sqlLabel;
+    tooltipText.textContent = token.dataset.sqlNote;
+    token.setAttribute('aria-describedby', tooltip.id);
+    tooltip.hidden = false;
+    positionReference();
+  }
+
+  app.addEventListener('pointerover', event => {
+    const token = event.target.closest('.sql-token');
+    if (token && event.pointerType !== 'touch' && !referencePinned) showReference(token);
+  });
+  app.addEventListener('pointerout', event => {
+    if (!referenceToken || referencePinned || referenceToken === document.activeElement) return;
+    if (event.target.closest('.sql-token') !== referenceToken || tooltip.contains(event.relatedTarget)) return;
+    referenceTimer = setTimeout(hideReference, 160);
+  });
+  tooltip.addEventListener('pointerenter', () => clearTimeout(referenceTimer));
+  tooltip.addEventListener('pointerleave', () => {
+    if (!referencePinned && referenceToken !== document.activeElement) hideReference();
+  });
+  app.addEventListener('focusin', event => {
+    const token = event.target.closest('.sql-token');
+    if (!token) return;
+    const previous = token.closest('.sql-code').querySelector('.sql-token[tabindex="0"]');
+    if (previous) previous.tabIndex = -1;
+    token.tabIndex = 0;
+    showReference(token);
+  });
+  app.addEventListener('focusout', event => {
+    if (event.target === referenceToken) hideReference();
+  });
+  app.addEventListener('click', event => {
+    const token = event.target.closest('.sql-token');
+    if (!token) {
+      if (!tooltip.contains(event.target)) hideReference();
+      return;
+    }
+    if (token === referenceToken && referencePinned) hideReference();
+    else showReference(token, true);
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && referenceToken) {
+      hideReference();
+      event.stopImmediatePropagation();
+      return;
+    }
+    const token = event.target.closest?.('.sql-token');
+    if (!token || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    const tokens = [...token.closest('.sql-code').querySelectorAll('.sql-token')];
+    const index = tokens.indexOf(token);
+    const next = { ArrowLeft: index - 1, ArrowRight: index + 1, Home: 0, End: tokens.length - 1 }[event.key];
+    event.preventDefault();
+    tokens[next]?.focus();
+  });
+  window.addEventListener('scroll', positionReference, { capture: true, passive: true });
+  window.addEventListener('resize', positionReference);
+
   const fx = f => `<pre class="code fx">${esc(f)}</pre>`;
   const colName = i => String.fromCharCode(65 + i);
   const tsv = t => [t.columns, ...t.rows].map(r => r.map(v => v ?? '').join('\t')).join('\n');
@@ -51,22 +174,34 @@
   const kind = { text: 'Explain', run: 'Example', compare: 'Compare', try: 'Practice', quiz: 'Check', sheet: 'Data' };
   function stepHtml(l, s, i) {
     const head = `<div class="kind k-${s.t}"><b>${L.indexOf(l) + 1}.${i + 1}</b>${kind[s.t]}</div>`;
-    if (s.t === 'text') return `<section class="step plain" id="s${i}">${head}<h2>${esc(s.h)}</h2>${keyP(s)}${s.html}</section>`;
+    if (s.t === 'text') return `<section class="step plain" id="s${i}">${head}<h2>${esc(s.h)}</h2>${keyP(s)}${withReferences(s.html)}</section>`;
     if (s.t === 'sheet') { const t = DATA[s.table]; return `<section class="step" id="s${i}">${head}<h2>${esc(s.h)}</h2><div class="tablewrap sheet"><table><thead><tr><th></th>${t.columns.map((c, n) => `<th>${colName(n)}</th>`).join('')}</tr></thead><tbody><tr><th>1</th>${t.columns.map(c => `<td class="hdr">${esc(c)}</td>`).join('')}</tr>${t.rows.map((r, n) => `<tr><th>${n + 2}</th>${r.map(v => `<td>${v === null ? '' : esc(v).replace(/ /g, '<span class="sp">·</span>')}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="bar"><button class="btn ghost" data-act="copy" data-v="${s.table}">Copy ${esc(s.sheet)} for Excel</button><span class="fine">Paste into cell A1. Dots mark spaces; empty cells are blanks.</span></div></section>`; }
-    if (s.t === 'run') return `<section class="step" id="s${i}">${head}<h2>${esc(s.h)}</h2>${keyP(s)}${code(s.sql)}${live(s.sql)}<p class="note">${s.note}</p><button class="link" data-act="pad" data-sql="${esc(s.sql)}">Change it and re-run</button></section>`;
-    if (s.t === 'compare') return `<section class="step compare" id="s${i}">${head}<h2>${esc(s.h)}</h2><p>${esc(s.intro)}</p><div class="sides">${['a', 'b'].map(k => `<div class="side side-${k}"><div class="sidelabel"><span>${k.toUpperCase()}</span>${esc(s[k].label)}</div>${s[k].sql ? `${s[k === 'a' ? 'b' : 'a'].sql ? codeDiff(s[k].sql, s[k === 'a' ? 'b' : 'a'].sql) + liveDiff(s[k].sql, s[k === 'a' ? 'b' : 'a'].sql) : code(s[k].sql) + live(s[k].sql)}<button class="link" data-act="pad" data-sql="${esc(s[k].sql)}">Change it and re-run</button>` : `${fx(s[k].formula)}<p class="shows">${esc(s[k].shows)}</p>`}</div>`).join('')}</div><div class="verdict"><div class="vlabel">What changed</div><p>${esc(s.diff)}</p></div><div class="which"><div class="vlabel">Use which</div><ul>${s.use.map(u => `<li>${esc(u)}</li>`).join('')}</ul></div></section>`;
+    if (s.t === 'run') return `<section class="step" id="s${i}">${head}<h2>${esc(s.h)}</h2>${keyP(s)}<p class="note">${s.note}</p>${code(s.sql)}${live(s.sql)}<button class="link" data-act="pad" data-sql="${esc(s.sql)}">Change it and re-run</button></section>`;
+    if (s.t === 'compare') return `<section class="step compare" id="s${i}">
+      ${head}<h2>${esc(s.h)}</h2><p>${esc(s.intro)}</p>
+      <div class="verdict"><div class="vlabel">What changed</div><p>${esc(s.diff)}</p></div>
+      <div class="which"><div class="vlabel">When to use it</div><ul>${s.use.map(u => `<li>${esc(u)}</li>`).join('')}</ul></div>
+      <div class="sides">${compareSide('a', s.a, s.b)}${compareSide('b', s.b, s.a)}</div>
+    </section>`;
     if (s.t === 'quiz') {
       const id = `${l.id}-q${i}`, pick = S.quiz[id];
       return `<section class="step" id="s${i}">${head}<h2>${esc(s.q)}</h2><div class="opts">${s.options.map((o, n) => `<button class="opt ${pick === n ? (n === s.correct ? 'right' : 'wrong') : ''}" data-act="quiz" data-id="${id}" data-l="${l.id}" data-i="${i}" data-n="${n}">${esc(o)}</button>`).join('')}</div>${pick != null ? `<div class="msg ${pick === s.correct ? 'good' : 'bad'}">${pick === s.correct ? 'Correct. ' : 'Not that one. '}${esc(s.why)}</div>` : ''}</section>`;
     }
     return `<section class="step" id="s${i}">${head}${exercise(s, true)}</section>`;
   }
+  function compareSide(key, example, other) {
+    const result = example.sql
+      ? `${code(example.sql, other.sql)}${other.sql ? liveDiff(example.sql, other.sql) : live(example.sql)}
+        <button class="link" data-act="pad" data-sql="${esc(example.sql)}">Change it and re-run</button>`
+      : `${fx(example.formula)}<p class="shows">${esc(example.shows)}</p>`;
+    return `<div class="side side-${key}"><div class="sidelabel"><span>${key.toUpperCase()}</span>${esc(example.label)}</div>${result}</div>`;
+  }
   function exercise(s, hints) {
     const n = S.hints[s.id] || 0, o = out[s.id], tried = !!o || S.done[s.id];
-    if (s.answerSql) return `<div class="ex ${S.done[s.id] ? 'done' : ''}" id="ex-${s.id}"><h2>${S.done[s.id] ? '<span class="tick">✓</span> ' : ''}${esc(s.title)}</h2><p>${esc(s.prompt)}</p><div class="chips"><span class="fine">Data:</span>${s.sheets.map(t => `<button class="chip" data-act="table" data-v="${t}">${t}</button>`).join('')}</div>
+    if (s.answerSql) return `<div class="ex ${S.done[s.id] ? 'done' : ''}" id="ex-${s.id}"><h2>${S.done[s.id] ? '<span class="tick">✓</span> ' : ''}${esc(s.title)}</h2><p class="exercise-prompt">${esc(s.prompt)}</p><div class="chips"><span class="fine">Data:</span>${s.sheets.map(t => `<button class="chip" data-act="table" data-v="${t}">${t}</button>`).join('')}</div>
 <div class="bar"><input class="field" id="ed-${s.id}" data-draft="${s.id}" value="${esc(S.drafts[s.id] ?? '')}" placeholder="Your answer" autocomplete="off" autocapitalize="off" aria-label="Your answer for ${esc(s.title)}"><button class="btn" data-act="answer" data-id="${s.id}">Check</button>${hints ? `<button class="btn ghost" data-act="hint" data-id="${s.id}">${n ? `Next hint (${Math.min(n, s.hints.length)}/${s.hints.length})` : 'Hint'}</button>` : ''}${hints || tried ? `<button class="link" data-act="solution" data-id="${s.id}">${S.shown[s.id] ? 'Hide formula' : 'Show formula'}</button>` : ''}</div>
 ${hints && n ? `<div class="hint">${s.hints.slice(0, n).map(h => `<p>${esc(h)}</p>`).join('')}</div>` : ''}${S.shown[s.id] ? `<div class="hint">${fx(s.solution)}<p>${esc(s.explain)}</p></div>` : ''}<div class="output">${o ? `<div class="msg ${o.pass ? 'good' : 'bad'}">${o.pass ? 'Correct. ' + esc(s.explain) : 'Not yet. Check which rows your formula includes, and whether a blank was counted as zero.'}</div>` : ''}</div></div>`;
-    return `<div class="ex ${S.done[s.id] ? 'done' : ''}" id="ex-${s.id}"><h2>${S.done[s.id] ? '<span class="tick">✓</span> ' : ''}${esc(s.title)}</h2><p>${esc(s.prompt)}</p><div class="chips"><span class="fine">Tables:</span>${chips(s.prompt + ' ' + s.solution)}</div>
+    return `<div class="ex ${S.done[s.id] ? 'done' : ''}" id="ex-${s.id}"><h2>${S.done[s.id] ? '<span class="tick">✓</span> ' : ''}${esc(s.title)}</h2><p class="exercise-prompt">${esc(s.prompt)}</p><div class="chips"><span class="fine">Tables:</span>${chips(s.prompt + ' ' + s.solution)}</div>
 <textarea class="editor" id="ed-${s.id}" data-draft="${s.id}" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" rows="${Math.max(5, (S.drafts[s.id] ?? s.starter ?? '').split('\n').length + 1)}" aria-label="Your query for ${esc(s.title)}">${esc(S.drafts[s.id] ?? s.starter ?? 'SELECT ')}</textarea>
 <div class="bar"><button class="btn" data-act="check" data-id="${s.id}">Run and check</button>${hints ? `<button class="btn ghost" data-act="hint" data-id="${s.id}">${n ? `Next hint (${Math.min(n, s.hints.length)}/${s.hints.length})` : 'Hint'}</button>` : ''}${hints || tried ? `<button class="link" data-act="solution" data-id="${s.id}">${S.shown[s.id] ? 'Hide answer' : 'Show answer'}</button>` : '<span class="fine">Answer unlocks after your first run.</span>'}</div>
 ${hints && n ? `<div class="hint">${s.hints.slice(0, n).map(h => `<p>${esc(h)}</p>`).join('')}</div>` : ''}${S.shown[s.id] ? `<div class="hint">${code(s.solution)}<p>${esc(s.explain)}</p></div>` : ''}<div class="output">${o ? outHtml(o, s) : ''}</div></div>`;
@@ -83,10 +218,10 @@ ${hints && n ? `<div class="hint">${s.hints.slice(0, n).map(h => `<p>${esc(h)}</
     return `<div class="ladder" aria-label="Clauses covered so far">${COURSE.ladder.map(c => { const li = L.findIndex(x => x.id === c.l), st = li < at ? 'known' : li === at ? 'new' : 'later'; return `<div class="rung ${st}"><code>${c.k}</code><span>${esc(c.d)}</span><em title="Run order">${c.order}</em></div>`; }).join('')}<p class="fine">Lit rows are clauses you have covered. The number is the order the database runs them in.</p></div>`;
   }
   const coreTable = l => `<div class="tablewrap"><table class="coretable"><thead><tr><th>Term</th><th>What it does</th><th>Why it matters</th></tr></thead><tbody>${l.core.map(r => `<tr><td><strong>${esc(r[0])}</strong></td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join('')}</tbody></table></div>`;
-  const coreHtml = l => `<section class="core"><h2>The core ${l.core.length}</h2><p class="fine">Read this table first. The rest of the page shows each of these on real data, then has you use it.</p>${coreTable(l)}<div class="tip"><span>Interview tip</span>${esc(l.tip)}</div><div class="goal"><span>By the end</span>${esc(l.outcome)}</div></section>`;
+  const coreHtml = l => `<section class="core"><details class="terms"><summary>Reference terms</summary>${coreTable(l)}</details><div class="tip"><span>Interview tip</span>${esc(l.tip)}</div><div class="goal"><span>By the end</span>${esc(l.outcome)}</div></section>`;
   function lessonView(l) {
     const i = L.indexOf(l), next = L[i + 1];
-    return `<article class="lesson"><header class="lhead"><div class="chapter ${l.excel ? 'xl' : ''}"><div class="chapnum">${l.track || (l.excel ? 'Excel' : 'SQL')} · Chapter ${i + 1} of ${L.length} · about ${l.mins} min</div><h1>${esc(l.title)}</h1><p>${esc(l.builds)}</p><button class="link" data-go="home">← All chapters</button></div>${coreHtml(l)}
+    return `<article class="lesson"><header class="lhead"><div class="chapter ${l.excel ? 'xl' : ''}"><div class="chapnum">${l.track || (l.excel ? 'Excel' : 'SQL')} · Chapter ${i + 1} of ${L.length} · about ${l.mins} min</div><h1>${esc(l.title)}</h1><p>${esc(l.builds)}</p><button class="link" data-go="home">← All chapters</button></div>${l.track === "Kinaxis" ? "" : referenceLegend}${coreHtml(l)}
 <details class="outline"><summary>On this page · ${doneIn(l)} of ${items(l).length} checks done</summary><ol>${l.steps.map((s, n) => `<li><button class="link" data-act="jump" data-v="s${n}"><span class="kind k-${s.t}">${kind[s.t]}</span> ${esc(s.h || s.title || s.q)}</button></li>`).join('')}</ol></details></header>
 ${l.steps.map((s, n) => stepHtml(l, s, n)).join('')}
 <footer class="lfoot">${pct(l) === 100 ? '<div class="msg good">Lesson complete.</div>' : `<p class="fine">${doneIn(l)} of ${items(l).length} checks done on this page. You can move on and come back.</p>`}${next ? `<button class="btn big" data-go="l-${next.id}">Next: ${esc(next.title)} →</button>` : '<button class="btn big" data-go="mock">Go to the mock interview →</button>'}</footer></article>`;
@@ -108,7 +243,7 @@ ${l.steps.map((s, n) => stepHtml(l, s, n)).join('')}
     return `<article class="lesson"><header class="lhead"><div class="crumb"><button class="link" data-go="home">All lessons</button> · Reference</div><h1>Cheat sheet</h1><p class="lead">The SQL patterns, the SQL Server differences, the Excel formulas, and every comparison from the lessons on one page.</p></header>
 <section class="step"><h2>Run order</h2><p><code>FROM → JOIN → WHERE → GROUP BY → HAVING → SELECT → ORDER BY</code></p><p>Row conditions go in WHERE. Total conditions go in HAVING. Aliases made in SELECT only work in ORDER BY.</p></section>
 <section class="step"><h2>Every core term</h2>${L.map((l, i) => `<h3>${i + 1}. ${esc(l.title)}</h3>${coreTable(l)}`).join('')}</section>
-<section class="step"><h2>Nine patterns</h2>${COURSE.cheats.map(([h, sql]) => `<h3>${esc(h)}</h3>${code(sql)}`).join('')}</section>
+<section class="step"><h2>Nine patterns</h2>${referenceLegend}${COURSE.cheats.map(([h, sql]) => `<h3>${esc(h)}</h3>${code(sql)}`).join('')}</section>
 <section class="step"><h2>SQL Server compared with other databases</h2><div class="tablewrap"><table><thead><tr><th>Task</th><th>SQL Server</th><th>Elsewhere</th></tr></thead><tbody>${COURSE.dialect.map(r => `<tr><td>${esc(r[0])}</td><td><code>${esc(r[1])}</code></td><td>${esc(r[2])}</td></tr>`).join('')}</tbody></table></div></section>
 <section class="step"><h2>Excel formulas</h2><div class="tablewrap"><table><tbody>${COURSE.excel.map(r => `<tr><td>${esc(r[0])}</td><td><code>${esc(r[1])}</code></td></tr>`).join('')}</tbody></table></div><p>Excel ignores case when matching, never ignores spaces, and treats a blank as 0 in arithmetic.</p></section>
 <section class="step"><h2>This versus that</h2>${L.map(l => l.steps.filter(s => s.t === 'compare').map(s => `<div class="vs"><h3>${esc(s.h)}</h3><p>${esc(s.diff)}</p><ul>${s.use.map(u => `<li>${esc(u)}</li>`).join('')}</ul><button class="link" data-go="l-${l.id}">See it in lesson ${L.indexOf(l) + 1}</button></div>`).join('')).join('')}</section>
@@ -126,6 +261,7 @@ ${l.steps.map((s, n) => stepHtml(l, s, n)).join('')}
   /* ---------- render and routing ---------- */
   const route = () => (location.hash || '#home').slice(1);
   function render(keepScroll) {
+    hideReference();
     const y = window.scrollY, r = route(), l = L.find(x => 'l-' + x.id === r);
     const total = L.reduce((n, x) => n + items(x).length, 0) + COURSE.mock.tasks.length, done = L.reduce((n, x) => n + doneIn(x), 0) + mockDone();
     app.innerHTML = `<nav class="top"><button class="brand" data-go="home">HAVI SQL prep</button><div class="meter" title="${done} of ${total} checks done"><span style="width:${Math.round(100 * done / total)}%"></span></div><button class="navbtn" data-act="theme" aria-label="Switch between light and dark">${isDark() ? '☀ Light' : '☾ Dark'}</button><button class="navbtn ${r === 'mock' ? 'on' : ''}" data-go="mock">Mock</button><button class="navbtn ${r === 'cheats' ? 'on' : ''}" data-go="cheats">Cheat sheet</button></nav><main id="main">${l ? lessonView(l) : r === 'mock' ? mockView() : r === 'cheats' ? cheatsView() : homeView()}</main><div class="dock"><button class="btn" data-act="drawer" data-v="tables">Tables</button><button class="btn" data-act="drawer" data-v="pad">Scratchpad</button></div><div id="drawer">${drawerHtml()}</div>`;
