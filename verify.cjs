@@ -16,14 +16,16 @@ require('./vendor/sql-wasm.js')({ locateFile: () => path.resolve('vendor/sql-was
     const label = `${lesson.id} / ${s.h || s.id || 'quiz'}`;
     if (s.t === 'run') { run(label, s.sql); n.examples++; }
     if (s.t === 'compare') {
-      const a = run(label + ' [A]', s.a.sql), b = run(label + ' [B]', s.b.sql);
-      if (!/same answer/i.test(s.h)) assert.notDeepEqual(a.values, b.values, `${label}: both sides return the same rows`);
+      const [a, b] = [s.a, s.b].map((x, i) => x.sql ? run(`${label} [${'AB'[i]}]`, x.sql) : (assert(x.formula && x.shows, label), null));
+      if (a && b && !/same answer/i.test(s.h)) assert.notDeepEqual(a.values, b.values, `${label}: both sides return the same rows`);
       n.comparisons++;
     }
+    if (s.t === 'sheet') assert(DATA[s.table], label);
+    if (s.t === 'try' && s.answerSql) { assert.deepEqual(ENGINE.run(s.answerSql).values, [[s.answer]], `${label}: answer`); n.exercises++; continue; }
     if (s.t === 'try') { assert(run(label, s.solution).values.length > 0, `${label}: empty answer`); assert(s.hints.length, label); n.exercises++; }
     if (s.t === 'quiz') assert(s.options[s.correct], label);
   }
-  for (const t of COURSE.mock.tasks) { assert(run('mock / ' + t.id, t.solution).values.length > 0); n.exercises++; }
+  for (const t of COURSE.mock.tasks) { if (t.answerSql) { assert.deepEqual(ENGINE.run(t.answerSql).values, [[t.answer]], t.id); n.exercises++; continue; } assert(run('mock / ' + t.id, t.solution).values.length > 0); n.exercises++; }
   for (const [h, sql] of COURSE.cheats) { run('cheat / ' + h, sql); n.examples++; }
   assert.equal(ENGINE.run('SELECT SUM(forecast_units) FROM daily_plan').values[0][0], 3560);
   assert.equal(ENGINE.run("SELECT DATEDIFF(day,'2026-11-02','2026-11-04'), LEFT('abcd',2), YEAR('2026-11-04')").values[0].join(), '2,ab,2026');

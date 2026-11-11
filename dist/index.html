@@ -150,6 +150,14 @@ tr:last-child td{border-bottom:0}
 .tabs button.on{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
 .dbody{padding:14px 16px 24px;overflow:auto;display:grid;gap:12px;align-content:start}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+.fx{color:var(--code-str)}
+.shows{font-size:14px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.sheet{max-height:340px;overflow:auto}
+.sheet th{position:sticky;top:0;text-align:center;color:var(--muted)}
+.sheet tbody th{position:sticky;left:0;top:auto}
+.sheet .hdr{font-weight:700}
+.field{flex:1;min-width:120px;max-width:220px;border:2px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;padding:8px 10px;font:15px var(--mono)}
+.field:focus{border-color:var(--brand);outline:0}
 
 </style>
 </head>
@@ -497,6 +505,7 @@ if (typeof module !== "undefined") module.exports = DATA;
 </script>
 <script>/* The whole curriculum. Each lesson is one page of steps, in the order you read them:
    text    - explanation
+   sheet   - a table shown as a spreadsheet, with a copy button
    run     - a query with its live result
    compare - two queries on the same data, side by side, with what changed and when to use which
    try     - a graded exercise, placed right after the idea it tests
@@ -888,8 +897,146 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
     },
     /* ------------------------------------------------------------------ 7 */
     {
+      id: 'xl-lookup', title: 'Excel: lookups and clean keys', mins: 20, priority: 'Must', excel: true,
+      builds: 'A lookup is a LEFT JOIN done one cell at a time. Everything from lesson 4 carries over.',
+      outcome: 'Write an exact-match XLOOKUP or VLOOKUP, lock ranges so the formula copies down safely, and clean and de-duplicate a key.',
+      steps: [
+        { t: 'text', h: 'The same data, as sheets', html: `
+<p>The Excel half of an assessment usually hands you an extract and asks for the same things as the SQL half: enrich, summarise, find the exceptions. The practice workbook has three sheets, which are three of the tables you already know.</p>
+<div class="tablewrap"><table><thead><tr><th>Sheet</th><th>Table</th><th>Columns</th></tr></thead><tbody>
+<tr><td>Plan</td><td>daily_plan</td><td>A plan_id · B plan_date · C location_id · D product_id · E forecast_units · F actual_units · G promo</td></tr>
+<tr><td>Products</td><td>products</td><td>A product_id · B product_name · C category · D unit_cost · E lead_time_days · F safety_stock</td></tr>
+<tr><td>Feed</td><td>product_feed</td><td>A feed_row_id · B raw_product_id · C raw_name · D loaded_date</td></tr>
+</tbody></table></div>
+<p>Row 1 is the header, so plan_id 1 sits in row 2. Each sheet below has a Copy button: paste into cell A1 of a blank sheet in Excel or Google Sheets and name the tab to match.</p>` },
+        { t: 'sheet', h: 'Sheet: Plan', table: 'daily_plan', sheet: 'Plan' },
+        { t: 'sheet', h: 'Sheet: Products', table: 'products', sheet: 'Products' },
+        { t: 'compare', h: 'XLOOKUP is a LEFT JOIN',
+          intro: 'Add the product name to plan rows 1, 2 and 18.',
+          a: { label: 'Excel, typed in H2 and copied down', formula: `=XLOOKUP(D2, Products!A:A,\n         Products!B:B, "MISSING")`, shows: 'Row 2 → Burger buns · Row 3 → Potato fries · Row 19 (plan 18, P99) → MISSING' },
+          b: { label: 'SQL', sql: `SELECT d.plan_id, d.product_id,\n       ISNULL(p.product_name, 'MISSING')\n         AS product_name\nFROM daily_plan d\nLEFT JOIN products p\n  ON p.product_id = d.product_id\nWHERE d.plan_id IN (1, 2, 18);` },
+          diff: 'Same result. XLOOKUP reads: find D2 in Products column A, return the value beside it from column B, and if it is not there say MISSING. Every plan row is kept, exactly like a LEFT JOIN, and the fourth argument does the job of ISNULL.',
+          use: ['XLOOKUP(what, where to look, what to return, if not found)', 'Leave the fourth argument out and a missing key shows #N/A', 'Filter the new column for MISSING to get the exception list, the Excel version of LEFT JOIN + IS NULL', 'XLOOKUP returns the first match only. A duplicate key in the lookup sheet is hidden, where SQL would show it as an extra row'] },
+        { t: 'compare', h: 'XLOOKUP and VLOOKUP',
+          intro: 'Older workbooks and older Excel versions use VLOOKUP. Know both.',
+          a: { label: 'XLOOKUP', formula: `=XLOOKUP(D2, Products!A:A,\n         Products!B:B, "MISSING")`, shows: 'Exact match by default. Lookup and return columns are named separately, so it can look left or right and survives inserted columns.' },
+          b: { label: 'VLOOKUP', formula: `=VLOOKUP(D2, Products!A:F,\n         2, FALSE)`, shows: 'Looks in the first column of the range and returns column number 2. Wrap it in IFERROR(…, "MISSING") to handle missing keys.' },
+          diff: 'VLOOKUP needs the key in the leftmost column, counts the return column by number, and defaults to approximate match. Leave out FALSE and it returns a wrong, plausible-looking value instead of an error.',
+          use: ['Always end VLOOKUP with FALSE (or 0)', 'XLOOKUP when the Excel version has it (2021 and Microsoft 365)', 'INDEX(return_range, MATCH(key, lookup_range, 0)) is the third option and works everywhere'] },
+        { t: 'compare', h: 'Lock the range before you copy the formula down',
+          intro: 'The formula in H2 is copied down to H25.',
+          a: { label: 'Relative range', formula: `=XLOOKUP(D2, Products!A2:A7,\n         Products!B2:B7, "MISSING")`, shows: 'In H3 it has become Products!A3:A8. Each row down, the lookup range slides one row and products fall off the top, so real products start returning MISSING.' },
+          b: { label: 'Absolute range', formula: `=XLOOKUP(D2, Products!$A$2:$A$7,\n         Products!$B$2:$B$7, "MISSING")`, shows: 'D2 still moves to D3, D4 … and the lookup range stays put.' },
+          diff: 'A plain reference moves when copied. A $ pins the column, the row or both. Whole-column references (A:A) do not slide and need no $.',
+          use: ['Lookup tables, rates, thresholds → $A$2:$A$7, or A:A', 'The cell on the current row → leave it relative (D2)', 'F4 cycles through the $ options while editing a reference'] },
+        { t: 'sheet', h: 'Sheet: Feed', table: 'product_feed', sheet: 'Feed' },
+        { t: 'text', h: 'Clean a key in Excel', html: `
+<p>Same idea as <code>UPPER(TRIM(x))</code> in lesson 5, in a helper column:</p>
+<pre class="code">E2:  =UPPER(TRIM(B2))        clean key
+F2:  =LEN(B2)                4 or 5 instead of 3 reveals a hidden space
+G2:  =COUNTIF(E:E, E2)       how many times this clean key occurs</pre>
+<ul><li>Excel comparisons (<code>=</code>, XLOOKUP, COUNTIF, SUMIFS) ignore upper and lower case, so <code>p03</code> matches <code>P03</code>. Use <code>EXACT(a, b)</code> when case must match.</li>
+<li>Spaces always count. <code>" P04"</code> does not match <code>"P04"</code>.</li>
+<li><code>TRIM</code> removes leading and trailing spaces and squeezes repeated spaces inside the text to one.</li>
+<li>A number stored as text (left-aligned, green corner) will not match a real number. <code>VALUE(x)</code> converts it.</li></ul>` },
+        { t: 'compare', h: 'COUNTIF flags duplicates. GROUP BY lists them.',
+          intro: 'Which cleaned feed keys occur more than once?',
+          a: { label: 'Excel helper column', formula: `=COUNTIF(E:E, E2)`, shows: 'Writes a count on every row: 2 on both P02 rows, 1 on the rest. Filter for values above 1.' },
+          b: { label: 'SQL', sql: `SELECT UPPER(TRIM(raw_product_id)) AS clean_id,\n       COUNT(*) AS row_count\nFROM product_feed\nGROUP BY UPPER(TRIM(raw_product_id))\nHAVING COUNT(*) > 1;` },
+          diff: 'COUNTIF keeps every row and adds the count beside it. GROUP BY + HAVING collapses to one row per duplicated key.',
+          use: ['See the offending rows in place → COUNTIF helper column, then filter', 'Want just the list of duplicated keys → PivotTable with Count, or SQL', 'Conditional Formatting → Duplicate Values highlights them without a formula'] },
+        { t: 'try', id: 'xl-missing', title: 'Which product is unmatched?', sheets: ['daily_plan', 'products'],
+          prompt: 'On the Plan sheet, add the XLOOKUP from above in column H and copy it down. One product_id returns MISSING. Which one?',
+          answerSql: `SELECT DISTINCT d.product_id FROM daily_plan d LEFT JOIN products p ON p.product_id = d.product_id WHERE p.product_id IS NULL`, answer: 'P99',
+          solution: `=XLOOKUP(D2, Products!A:A, Products!B:B, "MISSING")`,
+          hints: ['Filter column H for MISSING, or scan Products column A for an ID that is not there.', 'It is on plan_id 18.'],
+          explain: 'P99 is in the plan and not in the product list. Report it; do not delete the row.' },
+        { t: 'try', id: 'xl-rawmatch', title: 'How many feed keys match before cleaning?', sheets: ['product_feed', 'products'],
+          prompt: 'On the Feed sheet, look each raw_product_id (column B) up in Products column A without cleaning it. How many of the 7 feed rows find a match in Excel?',
+          answerSql: `SELECT COUNT(*) FROM product_feed f JOIN products p ON UPPER(f.raw_product_id) = p.product_id`, answer: 4,
+          solution: `=XLOOKUP(B2, Products!A:A, Products!A:A, "MISSING")`,
+          hints: ['Excel ignores case, so p03 matches.', 'Spaces still break a match, at either end.'],
+          explain: 'Four: both P02 rows, p03 and P06. The three keys with spaces fail. The raw SQL join in lesson 5 matched only three because that comparison was also case-sensitive. Same data, different matching rules in each tool.' },
+        { t: 'try', id: 'xl-dupe', title: 'Which cleaned key is duplicated?', sheets: ['product_feed'],
+          prompt: 'On the Feed sheet, build the clean key with UPPER(TRIM()) and count occurrences with COUNTIF. Which product ID appears twice?',
+          answerSql: `SELECT UPPER(TRIM(raw_product_id)) FROM product_feed GROUP BY UPPER(TRIM(raw_product_id)) HAVING COUNT(*) > 1`, answer: 'P02',
+          solution: `E2: =UPPER(TRIM(B2))     G2: =COUNTIF(E:E, E2)`,
+          hints: ['Look for the 2 in the COUNTIF column.'],
+          explain: 'P02, on feed rows 2 and 3. An XLOOKUP against this sheet would quietly return the first one.' },
+        { t: 'quiz', q: 'A colleague writes =VLOOKUP(D2, Products!A:F, 2) and some names look wrong. What is the most likely reason?',
+          options: ['The range should start at column B', 'The fourth argument is missing, so it is doing an approximate match', 'VLOOKUP cannot return text'], correct: 1,
+          why: 'Without FALSE, VLOOKUP assumes a sorted list and returns the nearest lower match. Add FALSE for an exact match.' }
+      ]
+    },
+    /* ------------------------------------------------------------------ 8 */
+    {
+      id: 'xl-summary', title: 'Excel: SUMIFS, PivotTables and IF', mins: 20, priority: 'Must', excel: true,
+      builds: 'SUMIFS is WHERE + SUM. A PivotTable is GROUP BY. IF is CASE. Lessons 3 and 5 in spreadsheet form.',
+      outcome: 'Total with several conditions, build a PivotTable summary, label exceptions with IF, and keep blanks from being read as zero.',
+      steps: [
+        { t: 'compare', h: 'SUMIFS is WHERE + SUM',
+          intro: 'Total forecast for Chicago (L01) promotional rows.',
+          a: { label: 'Excel', formula: `=SUMIFS(Plan!E:E,\n        Plan!C:C, "L01",\n        Plan!G:G, 1)`, shows: 'Result: 1435' },
+          b: { label: 'SQL', sql: `SELECT SUM(forecast_units)\n         AS total_forecast\nFROM daily_plan\nWHERE location_id = 'L01'\n  AND promo = 1;` },
+          diff: 'Same number. The range to add comes first, then pairs of (range to test, value to match). Every pair must be true, like conditions joined by AND.',
+          use: ['SUMIFS(sum_range, test_range1, value1, test_range2, value2, …)', 'COUNTIFS and AVERAGEIFS take the same pairs (COUNTIFS has no sum range)', 'Comparisons go in quotes: ">100", "<>L03". With a cell: ">" & J1', 'Dates: use DATE(2026,11,2) as the value, or a cell that holds the date', 'Older SUMIF has the arguments in a different order: SUMIF(test_range, value, sum_range)'] },
+        { t: 'compare', h: 'SUMIFS answers one question. A PivotTable answers it for every group.',
+          intro: 'Forecast and actual totals by location.',
+          a: { label: 'PivotTable', formula: `Insert → PivotTable (select the Plan data)\nRows:    location_id\nValues:  Sum of forecast_units\n         Sum of actual_units\nFilters: promo (optional)`, shows: 'One line per location plus a Grand Total, the same grid as the SQL result.' },
+          b: { label: 'SQL', sql: `SELECT location_id,\n       SUM(forecast_units) AS forecast,\n       SUM(actual_units)   AS actual\nFROM daily_plan\nGROUP BY location_id\nORDER BY location_id;` },
+          diff: 'Rows is GROUP BY, Values are the aggregates, Filters is WHERE. A value filter on the pivot (Value Filters → Greater Than) is HAVING.',
+          use: ['One figure for a cell in a report → SUMIFS', 'A breakdown you will slice several ways → PivotTable', 'If Values shows Count instead of Sum, the column contains text or blanks; fix the column or change Value Field Settings', 'Right-click → Refresh after the data changes; a pivot does not update itself'] },
+        { t: 'compare', h: 'Excel reads a blank as 0. SQL keeps NULL.',
+          intro: 'Actual minus forecast for plan 16 (no actual recorded) and plan 17 (a real zero).',
+          a: { label: 'Excel', formula: `H17:  =F17-E17\nH18:  =F18-E18`, shows: 'H17 → -140 (blank treated as 0) · H18 → -70. Both look like real shortfalls.' },
+          b: { label: 'SQL', sql: `SELECT plan_id, forecast_units,\n       actual_units,\n       actual_units - forecast_units\n         AS variance\nFROM daily_plan\nWHERE plan_id IN (16, 17);` },
+          diff: 'SQL refuses to calculate with a missing value. Excel silently substitutes zero, so a missing feed looks like a 140-unit miss. This is the same NULL-versus-zero point as lesson 5, and Excel gets it wrong by default.',
+          use: ['Guard the formula: =IF(F17="", "", F17-E17)', 'Count the blanks before trusting a total: =COUNTBLANK(F2:F25)', 'COUNT counts numbers, COUNTA counts non-empty cells, COUNTBLANK counts empty ones'] },
+        { t: 'text', h: 'IF is CASE', html: `
+<pre class="code">=IF(F2="", "Missing",
+   IF(F2>E2, "Under-forecast", "OK"))
+
+=IFS(F2="", "Missing", F2>E2, "Under-forecast", TRUE, "OK")</pre>
+<p>Read it like CASE: first test that is true wins, so the blank check goes first for the same reason the NULL check does. <code>IFS</code> avoids nesting; its final <code>TRUE</code> is the ELSE. <code>AND(a, b)</code> and <code>OR(a, b)</code> combine tests inside IF. <code>IFERROR(formula, "fallback")</code> catches #N/A and #DIV/0!.</p>
+<p>Count the labels afterwards with <code>=COUNTIF(H:H, "Missing")</code>, which is the Excel form of <code>SUM(CASE WHEN … THEN 1 ELSE 0 END)</code>.</p>` },
+        { t: 'text', h: 'A ratio across rows: forecast error (WAPE)', html: `
+<pre class="code">H2:  =IF(F2="", "", ABS(F2-E2))     copy down to H25
+J1:  =SUM(H2:H25) / SUM(F2:F25)      format as a percentage</pre>
+<p>The helper column leaves the missing-actual row out of the numerator, and <code>SUM</code> already skips blanks in the denominator, so both halves cover the same rows. In one cell: <code>=SUMPRODUCT((F2:F25&lt;&gt;"")*ABS(F2:F25-E2:E25))/SUM(F2:F25)</code>.</p>
+<p>Before reporting any total, check it against a control: <code>=SUM(Plan!E2:E25)</code> should be 3560, and <code>=COUNTA(Plan!A2:A25)</code> should be 24. If a filter or a bad paste lost rows, this is where you find out.</p>` },
+        { t: 'try', id: 'xl-sumifs', title: 'SUMIFS with a date', sheets: ['daily_plan'],
+          prompt: 'Using SUMIFS on the Plan sheet, what is the total forecast_units for location L01 on November 2, 2026?',
+          answerSql: `SELECT SUM(forecast_units) FROM daily_plan WHERE location_id = 'L01' AND plan_date = '2026-11-02'`, answer: 640,
+          solution: `=SUMIFS(Plan!E:E, Plan!C:C, "L01", Plan!B:B, DATE(2026,11,2))`,
+          hints: ['Sum range is column E. Two test pairs: column C and column B.', 'Three rows qualify: plan_id 7, 8 and 9.'],
+          explain: '110 + 210 + 320. If your pasted dates are text rather than dates, use "2026-11-02" as the value instead.' },
+        { t: 'try', id: 'xl-countifs', title: 'COUNTIFS with a helper column', sheets: ['daily_plan'],
+          prompt: 'How many Plan rows for location L02 have actual_units greater than forecast_units? Add a helper column for the comparison, then count with COUNTIFS.',
+          answerSql: `SELECT COUNT(*) FROM daily_plan WHERE location_id = 'L02' AND actual_units > forecast_units`, answer: 4,
+          solution: `H2: =F2>E2  (copy down)     =COUNTIFS(Plan!C:C, "L02", Plan!H:H, TRUE)`,
+          hints: ['COUNTIFS compares a column with a fixed value, not with another column. That is why the helper column is needed.', 'L02 has eight rows; check each one.'],
+          explain: 'plan_id 4, 5, 18 and 23. Comparing two columns row by row needs a helper column (or SUMPRODUCT); in SQL it is simply WHERE actual_units > forecast_units.' },
+        { t: 'try', id: 'xl-gap', title: 'Promotional gap', sheets: ['daily_plan'],
+          prompt: 'For location L01 promotional rows (promo = 1), what is total actual_units minus total forecast_units?',
+          answerSql: `SELECT SUM(actual_units) - SUM(forecast_units) FROM daily_plan WHERE location_id = 'L01' AND promo = 1`, answer: 190,
+          solution: `=SUMIFS(Plan!F:F, Plan!C:C, "L01", Plan!G:G, 1) - SUMIFS(Plan!E:E, Plan!C:C, "L01", Plan!G:G, 1)`,
+          hints: ['Two SUMIFS with the same conditions, one on column F and one on column E.', 'Actual total is 1625.'],
+          explain: '1625 − 1435. A PivotTable filtered to L01 and promo = 1 gives the same two totals.' },
+        { t: 'try', id: 'xl-wape', title: 'Overall forecast error', sheets: ['daily_plan'],
+          prompt: 'Calculate WAPE for the whole Plan sheet using the blank-safe helper column. Enter the percentage rounded to 2 decimals (for example 12.34).',
+          answerSql: `SELECT ROUND(100.0 * SUM(ABS(actual_units - forecast_units)) / SUM(actual_units), 2) FROM daily_plan WHERE actual_units IS NOT NULL`, answer: 11.54, tol: 0.011,
+          solution: `H2: =IF(F2="", "", ABS(F2-E2))     =SUM(H2:H25)/SUM(F2:F25)`,
+          hints: ['Numerator: sum of the absolute differences, skipping the blank actual.', 'Denominator: sum of actual_units, 3595.'],
+          explain: '415 ÷ 3595. Without the blank guard, row 17 adds 140 to the numerator and the answer rises to about 15.4%, which is the blank-as-zero error in action.' },
+        { t: 'quiz', q: 'A PivotTable shows "Count of actual_units" when you wanted the sum. What does that tell you?',
+          options: ['PivotTables cannot sum', 'The column contains blanks or text, so Excel defaulted to Count', 'The data has duplicates'], correct: 1,
+          why: 'Excel picks Count when a value column is not purely numeric. Change it in Value Field Settings, and note the blank: it is the missing feed.' }
+      ]
+    },
+    /* ------------------------------------------------------------------ 9 */
+    {
       id: 'steps', title: 'Multi-step queries: subquery, CTE, window', mins: 20, priority: 'If time',
-      builds: 'You used WITH and ROW_NUMBER in lesson 6. This lesson explains them properly.',
+      builds: 'Back to SQL. You used WITH and ROW_NUMBER in lesson 6; this lesson explains them properly.',
       outcome: 'Break a hard question into named steps and add a group total without losing the detail rows.',
       steps: [
         { t: 'compare', h: 'Subquery and CTE: same answer, different readability',
@@ -924,7 +1071,7 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
   /* -------------------------------------------------------------------- mock */
   mock: {
     minutes: 30,
-    intro: 'Six tasks, no hints, in the order an assessment tends to build: filter, total, join, missing data, calculation, investigation. Say your reasoning out loud as you type. Check each answer only after you have committed to it.',
+    intro: 'Six SQL tasks and two Excel tasks, no hints, in the order an assessment tends to build: filter, total, join, missing data, calculation, investigation, then the spreadsheet. Say your reasoning out loud as you type. Check each answer only after you have committed to it.',
     tasks: [
       { id: 'mock-1', title: 'Filter and sort', prompt: 'Return order_id, customer and status for orders at location L01, newest order_date first, then by order_id.',
         solution: `SELECT order_id, customer, status\nFROM orders\nWHERE location_id = 'L01'\nORDER BY order_date DESC, order_id;`, ordered: true,
@@ -943,7 +1090,13 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
         explain: 'Unshipped lines hold NULL, and NULL < x is never true, so they drop out on their own. Say that out loud; it shows you thought about it.' },
       { id: 'mock-6', title: 'Investigate a mismatch', prompt: 'The store for O1004 says their order shipped but the screen says Open. Return order_id, source_status, screen_status and synced_at for every order where the screen status differs from the status in orders.',
         solution: `SELECT o.order_id,\n       o.status AS source_status,\n       s.status AS screen_status,\n       s.synced_at\nFROM orders o\nJOIN screen_orders s ON s.order_id = o.order_id\nWHERE o.status <> s.status;`,
-        explain: 'The synced_at value is the evidence: the screen row was last refreshed before the order shipped.' }
+        explain: 'The synced_at value is the evidence: the screen row was last refreshed before the order shipped.' },
+      { id: 'mock-7', title: 'Excel: conditional total', sheets: ['daily_plan'], prompt: 'Excel, Plan sheet: what is the total actual_units for product P02 across all locations? Decide the formula before you calculate.',
+        answerSql: `SELECT SUM(actual_units) FROM daily_plan WHERE product_id = 'P02'`, answer: 1190,
+        solution: `=SUMIFS(Plan!F:F, Plan!D:D, "P02")`, explain: 'One condition, so SUMIF would also do. Say which rows it covers: six rows across L01 and L02.' },
+      { id: 'mock-8', title: 'Excel: lookup and exceptions', sheets: ['daily_plan', 'products'], prompt: 'Excel, Plan sheet: after adding an exact-match lookup of product_name from Products, how many Plan rows have no match?',
+        answerSql: `SELECT COUNT(*) FROM daily_plan d LEFT JOIN products p ON p.product_id = d.product_id WHERE p.product_id IS NULL`, answer: 1,
+        solution: `H2: =XLOOKUP(D2, Products!A:A, Products!B:B, "MISSING")     =COUNTIF(H:H, "MISSING")`, explain: 'One row, plan_id 18 with P99. In SQL this was LEFT JOIN + IS NULL.' }
     ],
     talk: [
       'Restate the request and say what one row of the answer should be.',
@@ -964,6 +1117,20 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
     ['Label rows / count by condition', `SELECT location_id,\n       SUM(CASE WHEN status = 'Open' THEN 1 ELSE 0 END) AS open_orders\nFROM orders\nGROUP BY location_id;`],
     ['Safe ratio', `SELECT ROUND(100.0 * SUM(qty_shipped) / NULLIF(SUM(qty_ordered), 0), 1) AS fill_pct\nFROM order_lines\nWHERE qty_shipped IS NOT NULL;`],
     ['One row per key (dedupe / latest)', `WITH ranked AS (\n  SELECT *, ROW_NUMBER() OVER (\n           PARTITION BY order_id, product_id ORDER BY line_id) AS rn\n  FROM order_lines\n)\nSELECT * FROM ranked WHERE rn = 1;`]
+  ],
+  excel: [
+    ['Exact lookup (LEFT JOIN)', '=XLOOKUP(D2, Products!A:A, Products!B:B, "MISSING")'],
+    ['Lookup in older Excel', '=IFERROR(VLOOKUP(D2, Products!A:F, 2, FALSE), "MISSING")'],
+    ['Lookup that works everywhere', '=INDEX(Products!B:B, MATCH(D2, Products!A:A, 0))'],
+    ['Conditional total (WHERE + SUM)', '=SUMIFS(Plan!E:E, Plan!C:C, "L01", Plan!G:G, 1)'],
+    ['Conditional count', '=COUNTIFS(Plan!C:C, "L02", Plan!F:F, ">100")'],
+    ['Clean a key', '=UPPER(TRIM(B2))'],
+    ['Flag duplicates', '=COUNTIF(E:E, E2)   then filter for > 1'],
+    ['Label rows (CASE)', '=IF(F2="", "Missing", IF(F2>E2, "Under-forecast", "OK"))'],
+    ['Blank-safe difference', '=IF(F2="", "", F2-E2)'],
+    ['Ratio across rows', '=SUMPRODUCT((F2:F25<>"")*ABS(F2:F25-E2:E25))/SUM(F2:F25)'],
+    ['Lock a range when copying', '$A$2:$A$7  (F4 while editing)'],
+    ['PivotTable (GROUP BY)', 'Insert → PivotTable. Rows = group, Values = Sum/Count, Filters = WHERE']
   ],
   dialect: [
     ['First N rows', 'SELECT TOP 5 …', 'LIMIT 5 at the end (MySQL, Postgres, SQLite)'],
@@ -1121,6 +1288,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const WORDS = /\b(SELECT|DISTINCT|TOP|FROM|WHERE|AND|OR|NOT|IN|BETWEEN|LIKE|IS|NULL|AS|ON|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|JOIN|GROUP|BY|HAVING|ORDER|ASC|DESC|UNION|ALL|CASE|WHEN|THEN|ELSE|END|WITH|OVER|PARTITION)\b/g;
   const hl = sql => sql.split(/('(?:''|[^'])*'|--[^\n]*)/).map((p, i) => i % 2 ? `<span class="${p[0] === '-' ? 'cm' : 'st'}">${esc(p)}</span>` : esc(p).replace(WORDS, '<b>$1</b>')).join('');
   const code = sql => `<pre class="code">${hl(sql)}</pre>`;
+  const fx = f => `<pre class="code fx">${esc(f)}</pre>`;
+  const colName = i => String.fromCharCode(65 + i);
+  const tsv = t => [t.columns, ...t.rows].map(r => r.map(v => v ?? '').join('\t')).join('\n');
 
   function exec(sql) { try { return { result: ENGINE.run(sql) }; } catch (e) { return { error: ENGINE.friendly(e.message) }; } }
   function grid(r, max = 60) {
@@ -1139,12 +1309,13 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   const nextLesson = () => L.find(l => pct(l) < 100);
 
   /* ---------- steps ---------- */
-  const kind = { text: 'Explain', run: 'Example', compare: 'Compare', try: 'Practice', quiz: 'Check' };
+  const kind = { text: 'Explain', run: 'Example', compare: 'Compare', try: 'Practice', quiz: 'Check', sheet: 'Data' };
   function stepHtml(l, s, i) {
     const head = `<div class="kind k-${s.t}">${kind[s.t]}</div>`;
     if (s.t === 'text') return `<section class="step" id="s${i}">${head}<h2>${esc(s.h)}</h2>${s.html}</section>`;
+    if (s.t === 'sheet') { const t = DATA[s.table]; return `<section class="step" id="s${i}">${head}<h2>${esc(s.h)}</h2><div class="tablewrap sheet"><table><thead><tr><th></th>${t.columns.map((c, n) => `<th>${colName(n)}</th>`).join('')}</tr></thead><tbody><tr><th>1</th>${t.columns.map(c => `<td class="hdr">${esc(c)}</td>`).join('')}</tr>${t.rows.map((r, n) => `<tr><th>${n + 2}</th>${r.map(v => `<td>${v === null ? '' : esc(v).replace(/ /g, '<span class="sp">·</span>')}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="bar"><button class="btn ghost" data-act="copy" data-v="${s.table}">Copy ${esc(s.sheet)} for Excel</button><span class="fine">Paste into cell A1. Dots mark spaces; empty cells are blanks.</span></div></section>`; }
     if (s.t === 'run') return `<section class="step" id="s${i}">${head}<h2>${esc(s.h)}</h2>${code(s.sql)}${live(s.sql)}<p class="note">${s.note}</p><button class="link" data-act="pad" data-sql="${esc(s.sql)}">Change it and re-run</button></section>`;
-    if (s.t === 'compare') return `<section class="step compare" id="s${i}">${head}<h2>${esc(s.h)}</h2><p>${esc(s.intro)}</p><div class="sides">${['a', 'b'].map(k => `<div class="side side-${k}"><div class="sidelabel"><span>${k.toUpperCase()}</span>${esc(s[k].label)}</div>${code(s[k].sql)}${live(s[k].sql)}<button class="link" data-act="pad" data-sql="${esc(s[k].sql)}">Change it and re-run</button></div>`).join('')}</div><div class="verdict"><p><strong>What changed:</strong> ${esc(s.diff)}</p><ul>${s.use.map(u => `<li>${esc(u)}</li>`).join('')}</ul></div></section>`;
+    if (s.t === 'compare') return `<section class="step compare" id="s${i}">${head}<h2>${esc(s.h)}</h2><p>${esc(s.intro)}</p><div class="sides">${['a', 'b'].map(k => `<div class="side side-${k}"><div class="sidelabel"><span>${k.toUpperCase()}</span>${esc(s[k].label)}</div>${s[k].sql ? `${code(s[k].sql)}${live(s[k].sql)}<button class="link" data-act="pad" data-sql="${esc(s[k].sql)}">Change it and re-run</button>` : `${fx(s[k].formula)}<p class="shows">${esc(s[k].shows)}</p>`}</div>`).join('')}</div><div class="verdict"><p><strong>What changed:</strong> ${esc(s.diff)}</p><ul>${s.use.map(u => `<li>${esc(u)}</li>`).join('')}</ul></div></section>`;
     if (s.t === 'quiz') {
       const id = `${l.id}-q${i}`, pick = S.quiz[id];
       return `<section class="step" id="s${i}">${head}<h2>${esc(s.q)}</h2><div class="opts">${s.options.map((o, n) => `<button class="opt ${pick === n ? (n === s.correct ? 'right' : 'wrong') : ''}" data-act="quiz" data-id="${id}" data-l="${l.id}" data-i="${i}" data-n="${n}">${esc(o)}</button>`).join('')}</div>${pick != null ? `<div class="msg ${pick === s.correct ? 'good' : 'bad'}">${pick === s.correct ? 'Correct. ' : 'Not that one. '}${esc(s.why)}</div>` : ''}</section>`;
@@ -1153,6 +1324,9 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   }
   function exercise(s, hints) {
     const n = S.hints[s.id] || 0, o = out[s.id], tried = !!o || S.done[s.id];
+    if (s.answerSql) return `<div class="ex ${S.done[s.id] ? 'done' : ''}" id="ex-${s.id}"><h2>${S.done[s.id] ? '<span class="tick">✓</span> ' : ''}${esc(s.title)}</h2><p>${esc(s.prompt)}</p><div class="chips"><span class="fine">Data:</span>${s.sheets.map(t => `<button class="chip" data-act="table" data-v="${t}">${t}</button>`).join('')}</div>
+<div class="bar"><input class="field" id="ed-${s.id}" data-draft="${s.id}" value="${esc(S.drafts[s.id] ?? '')}" placeholder="Your answer" autocomplete="off" autocapitalize="off" aria-label="Your answer for ${esc(s.title)}"><button class="btn" data-act="answer" data-id="${s.id}">Check</button>${hints ? `<button class="btn ghost" data-act="hint" data-id="${s.id}">${n ? `Next hint (${Math.min(n, s.hints.length)}/${s.hints.length})` : 'Hint'}</button>` : ''}${hints || tried ? `<button class="link" data-act="solution" data-id="${s.id}">${S.shown[s.id] ? 'Hide formula' : 'Show formula'}</button>` : ''}</div>
+${hints && n ? `<div class="hint">${s.hints.slice(0, n).map(h => `<p>${esc(h)}</p>`).join('')}</div>` : ''}${S.shown[s.id] ? `<div class="hint">${fx(s.solution)}<p>${esc(s.explain)}</p></div>` : ''}<div class="output">${o ? `<div class="msg ${o.pass ? 'good' : 'bad'}">${o.pass ? 'Correct. ' + esc(s.explain) : 'Not yet. Check which rows your formula includes, and whether a blank was counted as zero.'}</div>` : ''}</div></div>`;
     return `<div class="ex ${S.done[s.id] ? 'done' : ''}" id="ex-${s.id}"><h2>${S.done[s.id] ? '<span class="tick">✓</span> ' : ''}${esc(s.title)}</h2><p>${esc(s.prompt)}</p><div class="chips"><span class="fine">Tables:</span>${chips(s.prompt + ' ' + s.solution)}</div>
 <textarea class="editor" id="ed-${s.id}" data-draft="${s.id}" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" rows="${Math.max(5, (S.drafts[s.id] ?? s.starter ?? '').split('\n').length + 1)}" aria-label="Your query for ${esc(s.title)}">${esc(S.drafts[s.id] ?? s.starter ?? 'SELECT ')}</textarea>
 <div class="bar"><button class="btn" data-act="check" data-id="${s.id}">Run and check</button>${hints ? `<button class="btn ghost" data-act="hint" data-id="${s.id}">${n ? `Next hint (${Math.min(n, s.hints.length)}/${s.hints.length})` : 'Hint'}</button>` : ''}${hints || tried ? `<button class="link" data-act="solution" data-id="${s.id}">${S.shown[s.id] ? 'Hide answer' : 'Show answer'}</button>` : '<span class="fine">Answer unlocks after your first run.</span>'}</div>
@@ -1171,16 +1345,16 @@ ${hints && n ? `<div class="hint">${s.hints.slice(0, n).map(h => `<p>${esc(h)}</
   }
   function lessonView(l) {
     const i = L.indexOf(l), next = L[i + 1];
-    return `<article class="lesson"><header class="lhead"><div class="crumb"><button class="link" data-go="home">All lessons</button> · Lesson ${i + 1} of ${L.length} · about ${l.mins} min</div><h1>${esc(l.title)}</h1><p class="lead"><strong>Builds on:</strong> ${esc(l.builds)}</p><p class="lead"><strong>After this you can:</strong> ${esc(l.outcome)}</p>${ladder(l)}
+    return `<article class="lesson"><header class="lhead"><div class="crumb"><button class="link" data-go="home">All lessons</button> · Lesson ${i + 1} of ${L.length} · about ${l.mins} min</div><h1>${esc(l.title)}</h1><p class="lead"><strong>Builds on:</strong> ${esc(l.builds)}</p><p class="lead"><strong>After this you can:</strong> ${esc(l.outcome)}</p>${l.excel ? '' : ladder(l)}
 <details class="outline"><summary>On this page · ${doneIn(l)} of ${items(l).length} checks done</summary><ol>${l.steps.map((s, n) => `<li><button class="link" data-act="jump" data-v="s${n}"><span class="kind k-${s.t}">${kind[s.t]}</span> ${esc(s.h || s.title || s.q)}</button></li>`).join('')}</ol></details></header>
 ${l.steps.map((s, n) => stepHtml(l, s, n)).join('')}
 <footer class="lfoot">${pct(l) === 100 ? '<div class="msg good">Lesson complete.</div>' : `<p class="fine">${doneIn(l)} of ${items(l).length} checks done on this page. You can move on and come back.</p>`}${next ? `<button class="btn big" data-go="l-${next.id}">Next: ${esc(next.title)} →</button>` : '<button class="btn big" data-go="mock">Go to the mock interview →</button>'}</footer></article>`;
   }
   function homeView() {
     const must = L.filter(l => l.priority === 'Must'), mm = must.reduce((n, l) => n + l.mins, 0), n = nextLesson();
-    return `<div class="home"><header class="hero"><p class="eyebrow">HAVI technical interview · ${esc(COURSE.interview)}</p><h1>SQL for tracing order data</h1><p class="lead">One path. Each lesson explains an idea, shows two versions side by side on the same data, then has you write it. Queries are written the SQL Server way.</p><button class="btn big" data-go="${n ? 'l-' + n.id : 'mock'}">${Object.keys(S.done).length ? 'Continue' : 'Start'}: ${esc(n ? n.title : 'Mock interview')} →</button></header>
-<section class="plan"><h2>If time is short</h2><ol><li><strong>Lessons 1 to ${must.length}</strong> in order, about ${Math.floor(mm / 60)}h ${mm % 60}m. Lesson 4 (joins) and lesson 6 (tracing) carry the most weight for this role; do not skim them.</li><li><strong>Mock interview</strong>, ${COURSE.mock.minutes} minutes, talking out loud.</li><li><strong>Cheat sheet</strong> once before you sleep and once before the call.</li><li>Lesson ${L.length} only if all of that is done.</li></ol></section>
-<section><h2>Lessons</h2><div class="list">${L.map((l, i) => `<button class="row ${pct(l) === 100 ? 'complete' : n && n.id === l.id ? 'current' : ''}" data-go="l-${l.id}"><span class="num">${pct(l) === 100 ? '✓' : i + 1}</span><span class="rowbody"><strong>${esc(l.title)}</strong><span class="fine">${l.mins} min · ${l.steps.filter(s => s.t === 'compare').length} comparisons · ${l.steps.filter(s => s.t === 'try').length} exercises · ${doneIn(l)}/${items(l).length} done</span></span><span class="tag ${l.priority === 'Must' ? '' : 'soft'}">${l.priority}</span></button>`).join('')}<button class="row ${mockDone() === COURSE.mock.tasks.length ? 'complete' : ''}" data-go="mock"><span class="num">★</span><span class="rowbody"><strong>Mock interview</strong><span class="fine">${COURSE.mock.minutes} min timed · ${COURSE.mock.tasks.length} tasks, no hints · ${mockDone()}/${COURSE.mock.tasks.length} done</span></span><span class="tag">Must</span></button></div></section>
+    return `<div class="home"><header class="hero"><p class="eyebrow">HAVI technical interview · ${esc(COURSE.interview)}</p><h1>SQL and Excel for tracing order data</h1><p class="lead">One path. Each lesson explains an idea, shows two versions side by side on the same data, then has you write it. Queries are written the SQL Server way, and the Excel lessons tie each formula to the SQL it matches.</p><button class="btn big" data-go="${n ? 'l-' + n.id : 'mock'}">${Object.keys(S.done).length ? 'Continue' : 'Start'}: ${esc(n ? n.title : 'Mock interview')} →</button></header>
+<section class="plan"><h2>If time is short</h2><ol><li><strong>Lessons 1 to ${must.length}</strong> in order, about ${Math.floor(mm / 60)}h ${mm % 60}m. Lessons 1 to 6 are SQL; lesson 4 (joins) and lesson 6 (tracing) carry the most weight, so do not skim them. Lessons 7 and 8 are Excel and go quickly once the SQL is in place.</li><li><strong>Mock interview</strong>, ${COURSE.mock.minutes} minutes, talking out loud.</li><li><strong>Cheat sheet</strong> once before you sleep and once before the call.</li><li>Lesson ${L.length} only if all of that is done.</li></ol></section>
+<section><h2>Lessons</h2><div class="list">${L.map((l, i) => `<button class="row ${pct(l) === 100 ? 'complete' : n && n.id === l.id ? 'current' : ''}" data-go="l-${l.id}"><span class="num">${pct(l) === 100 ? '✓' : i + 1}</span><span class="rowbody"><strong>${esc(l.title)}</strong><span class="fine">${l.mins} min · ${l.excel ? 'Excel · ' : ''}${l.steps.filter(s => s.t === 'compare').length} comparisons · ${l.steps.filter(s => s.t === 'try').length} exercises · ${doneIn(l)}/${items(l).length} done</span></span><span class="tag ${l.priority === 'Must' ? '' : 'soft'}">${l.priority}</span></button>`).join('')}<button class="row ${mockDone() === COURSE.mock.tasks.length ? 'complete' : ''}" data-go="mock"><span class="num">★</span><span class="rowbody"><strong>Mock interview</strong><span class="fine">${COURSE.mock.minutes} min timed · ${COURSE.mock.tasks.length} tasks (SQL and Excel), no hints · ${mockDone()}/${COURSE.mock.tasks.length} done</span></span><span class="tag">Must</span></button></div></section>
 <section class="about"><h2>About the practice data</h2><p>Nine small, made-up tables: an order system (<code>orders</code>, <code>order_lines</code>), the copy a screen reads (<code>screen_orders</code>), master data and planning tables. Errors are planted on purpose so there is something to find. Nothing here is HAVI data.</p><p>The interview database is SQL Server. This page runs a small local database with a SQL Server layer on top, so <code>TOP</code>, <code>ISNULL</code>, <code>LEN</code>, <code>GETDATE</code>, <code>DATEDIFF</code> and <code>DATEADD</code> behave as you will write them tomorrow. If you use syntax SQL Server would reject, the checker tells you.</p><p class="fine">Progress is kept in this browser only.</p><button class="link" data-act="reset">Reset my progress</button></section></div>`;
   }
   const clock = n => `${String(Math.floor(n / 60)).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`;
@@ -1189,10 +1363,11 @@ ${l.steps.map((s, n) => stepHtml(l, s, n)).join('')}
     return `<article class="lesson"><header class="lhead"><div class="crumb"><button class="link" data-go="home">All lessons</button> · Rehearsal</div><h1>Mock interview</h1><p class="lead">${esc(m.intro)}</p><div class="timerbox"><div class="timer" id="timer">${clock(S.mockLeft)}</div><button class="btn" data-act="timer">${ticking ? 'Pause' : 'Start'}</button><button class="btn ghost" data-act="timer-reset">Reset to ${m.minutes}:00</button></div><h3>Say this as you work</h3><ol class="talk">${m.talk.map(t => `<li>${esc(t)}</li>`).join('')}</ol></header>${m.tasks.map((t, i) => `<section class="step"><div class="kind k-try">Task ${i + 1} of ${m.tasks.length}</div>${exercise(t, false)}</section>`).join('')}<footer class="lfoot"><p>${mockDone()} of ${m.tasks.length} solved. Any task you needed the answer for: clear it and redo it from a blank editor.</p><button class="btn big" data-go="cheats">Review the cheat sheet →</button></footer></article>`;
   }
   function cheatsView() {
-    return `<article class="lesson"><header class="lhead"><div class="crumb"><button class="link" data-go="home">All lessons</button> · Reference</div><h1>Cheat sheet</h1><p class="lead">The patterns, the SQL Server differences, and every comparison from the lessons on one page.</p></header>
+    return `<article class="lesson"><header class="lhead"><div class="crumb"><button class="link" data-go="home">All lessons</button> · Reference</div><h1>Cheat sheet</h1><p class="lead">The SQL patterns, the SQL Server differences, the Excel formulas, and every comparison from the lessons on one page.</p></header>
 <section class="step"><h2>Run order</h2><p><code>FROM → JOIN → WHERE → GROUP BY → HAVING → SELECT → ORDER BY</code></p><p>Row conditions go in WHERE. Total conditions go in HAVING. Aliases made in SELECT only work in ORDER BY.</p></section>
 <section class="step"><h2>Nine patterns</h2>${COURSE.cheats.map(([h, sql]) => `<h3>${esc(h)}</h3>${code(sql)}`).join('')}</section>
 <section class="step"><h2>SQL Server compared with other databases</h2><div class="tablewrap"><table><thead><tr><th>Task</th><th>SQL Server</th><th>Elsewhere</th></tr></thead><tbody>${COURSE.dialect.map(r => `<tr><td>${esc(r[0])}</td><td><code>${esc(r[1])}</code></td><td>${esc(r[2])}</td></tr>`).join('')}</tbody></table></div></section>
+<section class="step"><h2>Excel formulas</h2><div class="tablewrap"><table><tbody>${COURSE.excel.map(r => `<tr><td>${esc(r[0])}</td><td><code>${esc(r[1])}</code></td></tr>`).join('')}</tbody></table></div><p>Excel ignores case when matching, never ignores spaces, and treats a blank as 0 in arithmetic.</p></section>
 <section class="step"><h2>This versus that</h2>${L.map(l => l.steps.filter(s => s.t === 'compare').map(s => `<div class="vs"><h3>${esc(s.h)}</h3><p>${esc(s.diff)}</p><ul>${s.use.map(u => `<li>${esc(u)}</li>`).join('')}</ul><button class="link" data-go="l-${l.id}">See it in lesson ${L.indexOf(l) + 1}</button></div>`).join('')).join('')}</section>
 <section class="step"><h2>Wrong number on a screen: the five checks</h2><ol><li>Compare source and copy side by side, per key.</li><li>Too high: duplicates (<code>GROUP BY key HAVING COUNT(*) &gt; 1</code>) or join fan-out.</li><li>Too low: INNER JOIN or WHERE dropped rows; look for unmatched or dirty keys.</li><li>Out of date: check the sync timestamp.</li><li>Missing: LEFT JOIN + IS NULL in both directions.</li></ol><p>Report: evidence, cause, impact, next action.</p></section></article>`;
   }
@@ -1230,6 +1405,13 @@ ${l.steps.map((s, n) => stepHtml(l, s, n)).join('')}
     else if (act === 'quiz') { const l = L.find(x => x.id === b.dataset.l), s = l.steps[+b.dataset.i], n = +b.dataset.n; S.quiz[id] = n; if (n === s.correct) S.done[id] = true; save(); render(true); }
     else if (act === 'hint') { S.hints[id] = Math.min((S.hints[id] || 0) + 1, findEx(id).hints.length); save(); refreshEx(id); }
     else if (act === 'solution') { S.shown[id] = !S.shown[id]; save(); refreshEx(id); }
+    else if (act === 'copy') { const done = ok => { b.textContent = ok ? 'Copied. Paste into cell A1' : 'Copy was blocked here. Open Tables and type the rows instead'; }; try { navigator.clipboard.writeText(tsv(DATA[v])).then(() => done(true), () => done(false)); } catch (err) { done(false); } }
+    else if (act === 'answer') {
+      const s = findEx(id), raw = document.getElementById('ed-' + id).value.trim(); S.drafts[id] = raw;
+      const want = ENGINE.run(s.answerSql).values[0][0];
+      const pass = typeof want === 'number' ? Math.abs(parseFloat(raw.replace(/[%,\s]/g, '')) - want) <= (s.tol || 0.0001) : raw.toUpperCase() === String(want).toUpperCase();
+      if (pass) S.done[id] = true; out[id] = { pass }; save(); refreshEx(id);
+    }
     else if (act === 'check') {
       const s = findEx(id), sql = document.getElementById('ed-' + id).value; S.drafts[id] = sql;
       const o = exec(sql); o.lint = ENGINE.lint(sql);
@@ -1246,6 +1428,8 @@ ${l.steps.map((s, n) => stepHtml(l, s, n)).join('')}
     if (e.key === 'Escape' && drawer) { drawer = null; renderDrawer(); return; }
     const t = e.target; if (!t.classList || !t.classList.contains('editor')) return;
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); (t.id === 'pad' ? document.querySelector('[data-act="pad-run"]') : document.querySelector(`[data-act="check"][data-id="${t.dataset.draft}"]`)).click(); }
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('field')) document.querySelector(`[data-act="answer"][data-id="${e.target.dataset.draft}"]`).click();
   });
   window.addEventListener('hashchange', () => render());
 

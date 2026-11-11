@@ -1,5 +1,6 @@
 /* The whole curriculum. Each lesson is one page of steps, in the order you read them:
    text    - explanation
+   sheet   - a table shown as a spreadsheet, with a copy button
    run     - a query with its live result
    compare - two queries on the same data, side by side, with what changed and when to use which
    try     - a graded exercise, placed right after the idea it tests
@@ -391,8 +392,146 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
     },
     /* ------------------------------------------------------------------ 7 */
     {
+      id: 'xl-lookup', title: 'Excel: lookups and clean keys', mins: 20, priority: 'Must', excel: true,
+      builds: 'A lookup is a LEFT JOIN done one cell at a time. Everything from lesson 4 carries over.',
+      outcome: 'Write an exact-match XLOOKUP or VLOOKUP, lock ranges so the formula copies down safely, and clean and de-duplicate a key.',
+      steps: [
+        { t: 'text', h: 'The same data, as sheets', html: `
+<p>The Excel half of an assessment usually hands you an extract and asks for the same things as the SQL half: enrich, summarise, find the exceptions. The practice workbook has three sheets, which are three of the tables you already know.</p>
+<div class="tablewrap"><table><thead><tr><th>Sheet</th><th>Table</th><th>Columns</th></tr></thead><tbody>
+<tr><td>Plan</td><td>daily_plan</td><td>A plan_id · B plan_date · C location_id · D product_id · E forecast_units · F actual_units · G promo</td></tr>
+<tr><td>Products</td><td>products</td><td>A product_id · B product_name · C category · D unit_cost · E lead_time_days · F safety_stock</td></tr>
+<tr><td>Feed</td><td>product_feed</td><td>A feed_row_id · B raw_product_id · C raw_name · D loaded_date</td></tr>
+</tbody></table></div>
+<p>Row 1 is the header, so plan_id 1 sits in row 2. Each sheet below has a Copy button: paste into cell A1 of a blank sheet in Excel or Google Sheets and name the tab to match.</p>` },
+        { t: 'sheet', h: 'Sheet: Plan', table: 'daily_plan', sheet: 'Plan' },
+        { t: 'sheet', h: 'Sheet: Products', table: 'products', sheet: 'Products' },
+        { t: 'compare', h: 'XLOOKUP is a LEFT JOIN',
+          intro: 'Add the product name to plan rows 1, 2 and 18.',
+          a: { label: 'Excel, typed in H2 and copied down', formula: `=XLOOKUP(D2, Products!A:A,\n         Products!B:B, "MISSING")`, shows: 'Row 2 → Burger buns · Row 3 → Potato fries · Row 19 (plan 18, P99) → MISSING' },
+          b: { label: 'SQL', sql: `SELECT d.plan_id, d.product_id,\n       ISNULL(p.product_name, 'MISSING')\n         AS product_name\nFROM daily_plan d\nLEFT JOIN products p\n  ON p.product_id = d.product_id\nWHERE d.plan_id IN (1, 2, 18);` },
+          diff: 'Same result. XLOOKUP reads: find D2 in Products column A, return the value beside it from column B, and if it is not there say MISSING. Every plan row is kept, exactly like a LEFT JOIN, and the fourth argument does the job of ISNULL.',
+          use: ['XLOOKUP(what, where to look, what to return, if not found)', 'Leave the fourth argument out and a missing key shows #N/A', 'Filter the new column for MISSING to get the exception list, the Excel version of LEFT JOIN + IS NULL', 'XLOOKUP returns the first match only. A duplicate key in the lookup sheet is hidden, where SQL would show it as an extra row'] },
+        { t: 'compare', h: 'XLOOKUP and VLOOKUP',
+          intro: 'Older workbooks and older Excel versions use VLOOKUP. Know both.',
+          a: { label: 'XLOOKUP', formula: `=XLOOKUP(D2, Products!A:A,\n         Products!B:B, "MISSING")`, shows: 'Exact match by default. Lookup and return columns are named separately, so it can look left or right and survives inserted columns.' },
+          b: { label: 'VLOOKUP', formula: `=VLOOKUP(D2, Products!A:F,\n         2, FALSE)`, shows: 'Looks in the first column of the range and returns column number 2. Wrap it in IFERROR(…, "MISSING") to handle missing keys.' },
+          diff: 'VLOOKUP needs the key in the leftmost column, counts the return column by number, and defaults to approximate match. Leave out FALSE and it returns a wrong, plausible-looking value instead of an error.',
+          use: ['Always end VLOOKUP with FALSE (or 0)', 'XLOOKUP when the Excel version has it (2021 and Microsoft 365)', 'INDEX(return_range, MATCH(key, lookup_range, 0)) is the third option and works everywhere'] },
+        { t: 'compare', h: 'Lock the range before you copy the formula down',
+          intro: 'The formula in H2 is copied down to H25.',
+          a: { label: 'Relative range', formula: `=XLOOKUP(D2, Products!A2:A7,\n         Products!B2:B7, "MISSING")`, shows: 'In H3 it has become Products!A3:A8. Each row down, the lookup range slides one row and products fall off the top, so real products start returning MISSING.' },
+          b: { label: 'Absolute range', formula: `=XLOOKUP(D2, Products!$A$2:$A$7,\n         Products!$B$2:$B$7, "MISSING")`, shows: 'D2 still moves to D3, D4 … and the lookup range stays put.' },
+          diff: 'A plain reference moves when copied. A $ pins the column, the row or both. Whole-column references (A:A) do not slide and need no $.',
+          use: ['Lookup tables, rates, thresholds → $A$2:$A$7, or A:A', 'The cell on the current row → leave it relative (D2)', 'F4 cycles through the $ options while editing a reference'] },
+        { t: 'sheet', h: 'Sheet: Feed', table: 'product_feed', sheet: 'Feed' },
+        { t: 'text', h: 'Clean a key in Excel', html: `
+<p>Same idea as <code>UPPER(TRIM(x))</code> in lesson 5, in a helper column:</p>
+<pre class="code">E2:  =UPPER(TRIM(B2))        clean key
+F2:  =LEN(B2)                4 or 5 instead of 3 reveals a hidden space
+G2:  =COUNTIF(E:E, E2)       how many times this clean key occurs</pre>
+<ul><li>Excel comparisons (<code>=</code>, XLOOKUP, COUNTIF, SUMIFS) ignore upper and lower case, so <code>p03</code> matches <code>P03</code>. Use <code>EXACT(a, b)</code> when case must match.</li>
+<li>Spaces always count. <code>" P04"</code> does not match <code>"P04"</code>.</li>
+<li><code>TRIM</code> removes leading and trailing spaces and squeezes repeated spaces inside the text to one.</li>
+<li>A number stored as text (left-aligned, green corner) will not match a real number. <code>VALUE(x)</code> converts it.</li></ul>` },
+        { t: 'compare', h: 'COUNTIF flags duplicates. GROUP BY lists them.',
+          intro: 'Which cleaned feed keys occur more than once?',
+          a: { label: 'Excel helper column', formula: `=COUNTIF(E:E, E2)`, shows: 'Writes a count on every row: 2 on both P02 rows, 1 on the rest. Filter for values above 1.' },
+          b: { label: 'SQL', sql: `SELECT UPPER(TRIM(raw_product_id)) AS clean_id,\n       COUNT(*) AS row_count\nFROM product_feed\nGROUP BY UPPER(TRIM(raw_product_id))\nHAVING COUNT(*) > 1;` },
+          diff: 'COUNTIF keeps every row and adds the count beside it. GROUP BY + HAVING collapses to one row per duplicated key.',
+          use: ['See the offending rows in place → COUNTIF helper column, then filter', 'Want just the list of duplicated keys → PivotTable with Count, or SQL', 'Conditional Formatting → Duplicate Values highlights them without a formula'] },
+        { t: 'try', id: 'xl-missing', title: 'Which product is unmatched?', sheets: ['daily_plan', 'products'],
+          prompt: 'On the Plan sheet, add the XLOOKUP from above in column H and copy it down. One product_id returns MISSING. Which one?',
+          answerSql: `SELECT DISTINCT d.product_id FROM daily_plan d LEFT JOIN products p ON p.product_id = d.product_id WHERE p.product_id IS NULL`, answer: 'P99',
+          solution: `=XLOOKUP(D2, Products!A:A, Products!B:B, "MISSING")`,
+          hints: ['Filter column H for MISSING, or scan Products column A for an ID that is not there.', 'It is on plan_id 18.'],
+          explain: 'P99 is in the plan and not in the product list. Report it; do not delete the row.' },
+        { t: 'try', id: 'xl-rawmatch', title: 'How many feed keys match before cleaning?', sheets: ['product_feed', 'products'],
+          prompt: 'On the Feed sheet, look each raw_product_id (column B) up in Products column A without cleaning it. How many of the 7 feed rows find a match in Excel?',
+          answerSql: `SELECT COUNT(*) FROM product_feed f JOIN products p ON UPPER(f.raw_product_id) = p.product_id`, answer: 4,
+          solution: `=XLOOKUP(B2, Products!A:A, Products!A:A, "MISSING")`,
+          hints: ['Excel ignores case, so p03 matches.', 'Spaces still break a match, at either end.'],
+          explain: 'Four: both P02 rows, p03 and P06. The three keys with spaces fail. The raw SQL join in lesson 5 matched only three because that comparison was also case-sensitive. Same data, different matching rules in each tool.' },
+        { t: 'try', id: 'xl-dupe', title: 'Which cleaned key is duplicated?', sheets: ['product_feed'],
+          prompt: 'On the Feed sheet, build the clean key with UPPER(TRIM()) and count occurrences with COUNTIF. Which product ID appears twice?',
+          answerSql: `SELECT UPPER(TRIM(raw_product_id)) FROM product_feed GROUP BY UPPER(TRIM(raw_product_id)) HAVING COUNT(*) > 1`, answer: 'P02',
+          solution: `E2: =UPPER(TRIM(B2))     G2: =COUNTIF(E:E, E2)`,
+          hints: ['Look for the 2 in the COUNTIF column.'],
+          explain: 'P02, on feed rows 2 and 3. An XLOOKUP against this sheet would quietly return the first one.' },
+        { t: 'quiz', q: 'A colleague writes =VLOOKUP(D2, Products!A:F, 2) and some names look wrong. What is the most likely reason?',
+          options: ['The range should start at column B', 'The fourth argument is missing, so it is doing an approximate match', 'VLOOKUP cannot return text'], correct: 1,
+          why: 'Without FALSE, VLOOKUP assumes a sorted list and returns the nearest lower match. Add FALSE for an exact match.' }
+      ]
+    },
+    /* ------------------------------------------------------------------ 8 */
+    {
+      id: 'xl-summary', title: 'Excel: SUMIFS, PivotTables and IF', mins: 20, priority: 'Must', excel: true,
+      builds: 'SUMIFS is WHERE + SUM. A PivotTable is GROUP BY. IF is CASE. Lessons 3 and 5 in spreadsheet form.',
+      outcome: 'Total with several conditions, build a PivotTable summary, label exceptions with IF, and keep blanks from being read as zero.',
+      steps: [
+        { t: 'compare', h: 'SUMIFS is WHERE + SUM',
+          intro: 'Total forecast for Chicago (L01) promotional rows.',
+          a: { label: 'Excel', formula: `=SUMIFS(Plan!E:E,\n        Plan!C:C, "L01",\n        Plan!G:G, 1)`, shows: 'Result: 1435' },
+          b: { label: 'SQL', sql: `SELECT SUM(forecast_units)\n         AS total_forecast\nFROM daily_plan\nWHERE location_id = 'L01'\n  AND promo = 1;` },
+          diff: 'Same number. The range to add comes first, then pairs of (range to test, value to match). Every pair must be true, like conditions joined by AND.',
+          use: ['SUMIFS(sum_range, test_range1, value1, test_range2, value2, …)', 'COUNTIFS and AVERAGEIFS take the same pairs (COUNTIFS has no sum range)', 'Comparisons go in quotes: ">100", "<>L03". With a cell: ">" & J1', 'Dates: use DATE(2026,11,2) as the value, or a cell that holds the date', 'Older SUMIF has the arguments in a different order: SUMIF(test_range, value, sum_range)'] },
+        { t: 'compare', h: 'SUMIFS answers one question. A PivotTable answers it for every group.',
+          intro: 'Forecast and actual totals by location.',
+          a: { label: 'PivotTable', formula: `Insert → PivotTable (select the Plan data)\nRows:    location_id\nValues:  Sum of forecast_units\n         Sum of actual_units\nFilters: promo (optional)`, shows: 'One line per location plus a Grand Total, the same grid as the SQL result.' },
+          b: { label: 'SQL', sql: `SELECT location_id,\n       SUM(forecast_units) AS forecast,\n       SUM(actual_units)   AS actual\nFROM daily_plan\nGROUP BY location_id\nORDER BY location_id;` },
+          diff: 'Rows is GROUP BY, Values are the aggregates, Filters is WHERE. A value filter on the pivot (Value Filters → Greater Than) is HAVING.',
+          use: ['One figure for a cell in a report → SUMIFS', 'A breakdown you will slice several ways → PivotTable', 'If Values shows Count instead of Sum, the column contains text or blanks; fix the column or change Value Field Settings', 'Right-click → Refresh after the data changes; a pivot does not update itself'] },
+        { t: 'compare', h: 'Excel reads a blank as 0. SQL keeps NULL.',
+          intro: 'Actual minus forecast for plan 16 (no actual recorded) and plan 17 (a real zero).',
+          a: { label: 'Excel', formula: `H17:  =F17-E17\nH18:  =F18-E18`, shows: 'H17 → -140 (blank treated as 0) · H18 → -70. Both look like real shortfalls.' },
+          b: { label: 'SQL', sql: `SELECT plan_id, forecast_units,\n       actual_units,\n       actual_units - forecast_units\n         AS variance\nFROM daily_plan\nWHERE plan_id IN (16, 17);` },
+          diff: 'SQL refuses to calculate with a missing value. Excel silently substitutes zero, so a missing feed looks like a 140-unit miss. This is the same NULL-versus-zero point as lesson 5, and Excel gets it wrong by default.',
+          use: ['Guard the formula: =IF(F17="", "", F17-E17)', 'Count the blanks before trusting a total: =COUNTBLANK(F2:F25)', 'COUNT counts numbers, COUNTA counts non-empty cells, COUNTBLANK counts empty ones'] },
+        { t: 'text', h: 'IF is CASE', html: `
+<pre class="code">=IF(F2="", "Missing",
+   IF(F2>E2, "Under-forecast", "OK"))
+
+=IFS(F2="", "Missing", F2>E2, "Under-forecast", TRUE, "OK")</pre>
+<p>Read it like CASE: first test that is true wins, so the blank check goes first for the same reason the NULL check does. <code>IFS</code> avoids nesting; its final <code>TRUE</code> is the ELSE. <code>AND(a, b)</code> and <code>OR(a, b)</code> combine tests inside IF. <code>IFERROR(formula, "fallback")</code> catches #N/A and #DIV/0!.</p>
+<p>Count the labels afterwards with <code>=COUNTIF(H:H, "Missing")</code>, which is the Excel form of <code>SUM(CASE WHEN … THEN 1 ELSE 0 END)</code>.</p>` },
+        { t: 'text', h: 'A ratio across rows: forecast error (WAPE)', html: `
+<pre class="code">H2:  =IF(F2="", "", ABS(F2-E2))     copy down to H25
+J1:  =SUM(H2:H25) / SUM(F2:F25)      format as a percentage</pre>
+<p>The helper column leaves the missing-actual row out of the numerator, and <code>SUM</code> already skips blanks in the denominator, so both halves cover the same rows. In one cell: <code>=SUMPRODUCT((F2:F25&lt;&gt;"")*ABS(F2:F25-E2:E25))/SUM(F2:F25)</code>.</p>
+<p>Before reporting any total, check it against a control: <code>=SUM(Plan!E2:E25)</code> should be 3560, and <code>=COUNTA(Plan!A2:A25)</code> should be 24. If a filter or a bad paste lost rows, this is where you find out.</p>` },
+        { t: 'try', id: 'xl-sumifs', title: 'SUMIFS with a date', sheets: ['daily_plan'],
+          prompt: 'Using SUMIFS on the Plan sheet, what is the total forecast_units for location L01 on November 2, 2026?',
+          answerSql: `SELECT SUM(forecast_units) FROM daily_plan WHERE location_id = 'L01' AND plan_date = '2026-11-02'`, answer: 640,
+          solution: `=SUMIFS(Plan!E:E, Plan!C:C, "L01", Plan!B:B, DATE(2026,11,2))`,
+          hints: ['Sum range is column E. Two test pairs: column C and column B.', 'Three rows qualify: plan_id 7, 8 and 9.'],
+          explain: '110 + 210 + 320. If your pasted dates are text rather than dates, use "2026-11-02" as the value instead.' },
+        { t: 'try', id: 'xl-countifs', title: 'COUNTIFS with a helper column', sheets: ['daily_plan'],
+          prompt: 'How many Plan rows for location L02 have actual_units greater than forecast_units? Add a helper column for the comparison, then count with COUNTIFS.',
+          answerSql: `SELECT COUNT(*) FROM daily_plan WHERE location_id = 'L02' AND actual_units > forecast_units`, answer: 4,
+          solution: `H2: =F2>E2  (copy down)     =COUNTIFS(Plan!C:C, "L02", Plan!H:H, TRUE)`,
+          hints: ['COUNTIFS compares a column with a fixed value, not with another column. That is why the helper column is needed.', 'L02 has eight rows; check each one.'],
+          explain: 'plan_id 4, 5, 18 and 23. Comparing two columns row by row needs a helper column (or SUMPRODUCT); in SQL it is simply WHERE actual_units > forecast_units.' },
+        { t: 'try', id: 'xl-gap', title: 'Promotional gap', sheets: ['daily_plan'],
+          prompt: 'For location L01 promotional rows (promo = 1), what is total actual_units minus total forecast_units?',
+          answerSql: `SELECT SUM(actual_units) - SUM(forecast_units) FROM daily_plan WHERE location_id = 'L01' AND promo = 1`, answer: 190,
+          solution: `=SUMIFS(Plan!F:F, Plan!C:C, "L01", Plan!G:G, 1) - SUMIFS(Plan!E:E, Plan!C:C, "L01", Plan!G:G, 1)`,
+          hints: ['Two SUMIFS with the same conditions, one on column F and one on column E.', 'Actual total is 1625.'],
+          explain: '1625 − 1435. A PivotTable filtered to L01 and promo = 1 gives the same two totals.' },
+        { t: 'try', id: 'xl-wape', title: 'Overall forecast error', sheets: ['daily_plan'],
+          prompt: 'Calculate WAPE for the whole Plan sheet using the blank-safe helper column. Enter the percentage rounded to 2 decimals (for example 12.34).',
+          answerSql: `SELECT ROUND(100.0 * SUM(ABS(actual_units - forecast_units)) / SUM(actual_units), 2) FROM daily_plan WHERE actual_units IS NOT NULL`, answer: 11.54, tol: 0.011,
+          solution: `H2: =IF(F2="", "", ABS(F2-E2))     =SUM(H2:H25)/SUM(F2:F25)`,
+          hints: ['Numerator: sum of the absolute differences, skipping the blank actual.', 'Denominator: sum of actual_units, 3595.'],
+          explain: '415 ÷ 3595. Without the blank guard, row 17 adds 140 to the numerator and the answer rises to about 15.4%, which is the blank-as-zero error in action.' },
+        { t: 'quiz', q: 'A PivotTable shows "Count of actual_units" when you wanted the sum. What does that tell you?',
+          options: ['PivotTables cannot sum', 'The column contains blanks or text, so Excel defaulted to Count', 'The data has duplicates'], correct: 1,
+          why: 'Excel picks Count when a value column is not purely numeric. Change it in Value Field Settings, and note the blank: it is the missing feed.' }
+      ]
+    },
+    /* ------------------------------------------------------------------ 9 */
+    {
       id: 'steps', title: 'Multi-step queries: subquery, CTE, window', mins: 20, priority: 'If time',
-      builds: 'You used WITH and ROW_NUMBER in lesson 6. This lesson explains them properly.',
+      builds: 'Back to SQL. You used WITH and ROW_NUMBER in lesson 6; this lesson explains them properly.',
       outcome: 'Break a hard question into named steps and add a group total without losing the detail rows.',
       steps: [
         { t: 'compare', h: 'Subquery and CTE: same answer, different readability',
@@ -427,7 +566,7 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
   /* -------------------------------------------------------------------- mock */
   mock: {
     minutes: 30,
-    intro: 'Six tasks, no hints, in the order an assessment tends to build: filter, total, join, missing data, calculation, investigation. Say your reasoning out loud as you type. Check each answer only after you have committed to it.',
+    intro: 'Six SQL tasks and two Excel tasks, no hints, in the order an assessment tends to build: filter, total, join, missing data, calculation, investigation, then the spreadsheet. Say your reasoning out loud as you type. Check each answer only after you have committed to it.',
     tasks: [
       { id: 'mock-1', title: 'Filter and sort', prompt: 'Return order_id, customer and status for orders at location L01, newest order_date first, then by order_id.',
         solution: `SELECT order_id, customer, status\nFROM orders\nWHERE location_id = 'L01'\nORDER BY order_date DESC, order_id;`, ordered: true,
@@ -446,7 +585,13 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
         explain: 'Unshipped lines hold NULL, and NULL < x is never true, so they drop out on their own. Say that out loud; it shows you thought about it.' },
       { id: 'mock-6', title: 'Investigate a mismatch', prompt: 'The store for O1004 says their order shipped but the screen says Open. Return order_id, source_status, screen_status and synced_at for every order where the screen status differs from the status in orders.',
         solution: `SELECT o.order_id,\n       o.status AS source_status,\n       s.status AS screen_status,\n       s.synced_at\nFROM orders o\nJOIN screen_orders s ON s.order_id = o.order_id\nWHERE o.status <> s.status;`,
-        explain: 'The synced_at value is the evidence: the screen row was last refreshed before the order shipped.' }
+        explain: 'The synced_at value is the evidence: the screen row was last refreshed before the order shipped.' },
+      { id: 'mock-7', title: 'Excel: conditional total', sheets: ['daily_plan'], prompt: 'Excel, Plan sheet: what is the total actual_units for product P02 across all locations? Decide the formula before you calculate.',
+        answerSql: `SELECT SUM(actual_units) FROM daily_plan WHERE product_id = 'P02'`, answer: 1190,
+        solution: `=SUMIFS(Plan!F:F, Plan!D:D, "P02")`, explain: 'One condition, so SUMIF would also do. Say which rows it covers: six rows across L01 and L02.' },
+      { id: 'mock-8', title: 'Excel: lookup and exceptions', sheets: ['daily_plan', 'products'], prompt: 'Excel, Plan sheet: after adding an exact-match lookup of product_name from Products, how many Plan rows have no match?',
+        answerSql: `SELECT COUNT(*) FROM daily_plan d LEFT JOIN products p ON p.product_id = d.product_id WHERE p.product_id IS NULL`, answer: 1,
+        solution: `H2: =XLOOKUP(D2, Products!A:A, Products!B:B, "MISSING")     =COUNTIF(H:H, "MISSING")`, explain: 'One row, plan_id 18 with P99. In SQL this was LEFT JOIN + IS NULL.' }
     ],
     talk: [
       'Restate the request and say what one row of the answer should be.',
@@ -467,6 +612,20 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
     ['Label rows / count by condition', `SELECT location_id,\n       SUM(CASE WHEN status = 'Open' THEN 1 ELSE 0 END) AS open_orders\nFROM orders\nGROUP BY location_id;`],
     ['Safe ratio', `SELECT ROUND(100.0 * SUM(qty_shipped) / NULLIF(SUM(qty_ordered), 0), 1) AS fill_pct\nFROM order_lines\nWHERE qty_shipped IS NOT NULL;`],
     ['One row per key (dedupe / latest)', `WITH ranked AS (\n  SELECT *, ROW_NUMBER() OVER (\n           PARTITION BY order_id, product_id ORDER BY line_id) AS rn\n  FROM order_lines\n)\nSELECT * FROM ranked WHERE rn = 1;`]
+  ],
+  excel: [
+    ['Exact lookup (LEFT JOIN)', '=XLOOKUP(D2, Products!A:A, Products!B:B, "MISSING")'],
+    ['Lookup in older Excel', '=IFERROR(VLOOKUP(D2, Products!A:F, 2, FALSE), "MISSING")'],
+    ['Lookup that works everywhere', '=INDEX(Products!B:B, MATCH(D2, Products!A:A, 0))'],
+    ['Conditional total (WHERE + SUM)', '=SUMIFS(Plan!E:E, Plan!C:C, "L01", Plan!G:G, 1)'],
+    ['Conditional count', '=COUNTIFS(Plan!C:C, "L02", Plan!F:F, ">100")'],
+    ['Clean a key', '=UPPER(TRIM(B2))'],
+    ['Flag duplicates', '=COUNTIF(E:E, E2)   then filter for > 1'],
+    ['Label rows (CASE)', '=IF(F2="", "Missing", IF(F2>E2, "Under-forecast", "OK"))'],
+    ['Blank-safe difference', '=IF(F2="", "", F2-E2)'],
+    ['Ratio across rows', '=SUMPRODUCT((F2:F25<>"")*ABS(F2:F25-E2:E25))/SUM(F2:F25)'],
+    ['Lock a range when copying', '$A$2:$A$7  (F4 while editing)'],
+    ['PivotTable (GROUP BY)', 'Insert → PivotTable. Rows = group, Values = Sum/Count, Filters = WHERE']
   ],
   dialect: [
     ['First N rows', 'SELECT TOP 5 …', 'LIMIT 5 at the end (MySQL, Postgres, SQLite)'],

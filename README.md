@@ -1,6 +1,6 @@
 # HAVI SQL Prep
 
-A single-page SQL course for a supply chain order-data technical interview. Each lesson explains an idea, shows two queries side by side on the same data, then has a graded exercise directly underneath. Queries are written in SQL Server syntax.
+A single-page SQL and Excel course for a supply chain order-data technical interview. Each lesson explains an idea, shows two queries side by side on the same data, then has a graded exercise directly underneath. Queries are written in SQL Server syntax, and two Excel lessons tie each formula to the SQL it matches.
 
 ## Use it
 
