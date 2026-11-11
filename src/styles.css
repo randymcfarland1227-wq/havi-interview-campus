@@ -227,3 +227,6 @@ code{background:var(--t-text);color:var(--code-ink);font-weight:500}
 .tag{color:var(--c-quiz)} .tag.soft{color:var(--muted)}
 .vs h3{color:var(--c-compare)}
 .lesson .step>h3{color:var(--chap)}
+
+.plan .coretable td:last-child{color:var(--ink);font-weight:600;min-width:150px}
+.plan .link{font-size:inherit}

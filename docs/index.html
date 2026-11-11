@@ -238,6 +238,9 @@ code{background:var(--t-text);color:var(--code-ink);font-weight:500}
 .vs h3{color:var(--c-compare)}
 .lesson .step>h3{color:var(--chap)}
 
+.plan .coretable td:last-child{color:var(--ink);font-weight:600;min-width:150px}
+.plan .link{font-size:inherit}
+
 </style>
 </head>
 <body>
@@ -592,6 +595,18 @@ if (typeof module !== "undefined") module.exports = DATA;
    Every query in this file is executed by verify.cjs. */
 const COURSE = {
   interview: 'Wednesday, Nov 11',
+  role: 'Planning Systems Specialist',
+  roleMap: [
+    ['Intermediate SQL; use SQL to investigate databases independently', 'Chapters 1 to 5, and 10', ['read', 'filter', 'aggregate', 'joins', 'functions', 'steps']],
+    ['Monitor and validate planning inputs for accuracy, completeness and integrity', 'Chapter 4 (unmatched keys), chapter 6 (duplicates, missing, stale)', ['joins', 'trace']],
+    ['Investigate and resolve data quality, system and process issues; root cause analysis', 'Chapter 6', ['trace']],
+    ['Systems testing practices', 'Chapter 6: test the fix, regression check', ['trace']],
+    ['Monitor forecast performance, planning exceptions and replenishment results; KPIs', 'Chapter 7', ['kpi']],
+    ['Forecasting, replenishment and inventory concepts; promotional planning', 'Chapter 7', ['kpi']],
+    ['Pull data into Excel for analysis; ad-hoc extractions and reports', 'Chapter 7 (hand-off), chapters 8 and 9', ['kpi', 'xl-lookup', 'xl-summary']],
+    ['Advanced Excel', 'Chapters 8 and 9', ['xl-lookup', 'xl-summary']],
+    ['Turn data into recommendations; communicate resolutions to stakeholders', 'Chapter 6 (report a finding), mock interview talk track', ['trace']]
+  ],
   ladder: [
     { k: 'SELECT', d: 'columns and calculations to show', l: 'filter', order: 6 },
     { k: 'FROM', d: 'the table that sets what one row means', l: 'read', order: 1 },
@@ -925,7 +940,7 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
 <li><strong>Completeness.</strong> Does a record exist on one side only? (Missing from the screen, or on the screen with no source.)</li></ol>
 <p>Then report: what you compared, what differs, the cause, how many records it affects, and the next action.</p>` },
         { t: 'run', h: 'Step 1: source beside screen', key: "Total the source to the same grain as the screen, then put them side by side.", sql: `WITH src AS (\n  SELECT order_id, SUM(qty_ordered) AS source_qty\n  FROM order_lines\n  GROUP BY order_id\n)\nSELECT o.order_id,\n       o.status     AS source_status,\n       s.status     AS screen_status,\n       src.source_qty,\n       s.total_qty  AS screen_qty\nFROM orders o\nLEFT JOIN src             ON src.order_id = o.order_id\nLEFT JOIN screen_orders s ON s.order_id   = o.order_id\nORDER BY o.order_id;`,
-          note: `<code>WITH src AS (…)</code> names a sub-result so the main query stays readable (more in lesson 7). The lines are totalled to order grain <em>before</em> joining, so nothing fans out. Read the output: O1004 disagrees on status, O1005 on quantity, O1006 is not on the screen at all. O1002 agrees, and the store still says it is wrong. Each one is a different cause.` },
+          note: `<code>WITH src AS (…)</code> names a sub-result so the main query stays readable (more in chapter 10). The lines are totalled to order grain <em>before</em> joining, so nothing fans out. Read the output: O1004 disagrees on status, O1005 on quantity, O1006 is not on the screen at all. O1002 agrees, and the store still says it is wrong. Each one is a different cause.` },
         { t: 'compare', h: 'Too high: find the duplicate, do not hide it',
           intro: 'O1002 shows 200 units. The store ordered 100.',
           a: { label: 'DISTINCT hides it', sql: `SELECT DISTINCT order_id, product_id,\n       qty_ordered\nFROM order_lines\nWHERE order_id = 'O1002';` },
@@ -980,6 +995,12 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
           solution: `SELECT o.order_id,\n       o.status AS source_status,\n       s.status AS screen_status\nFROM orders o\nJOIN screen_orders s\n  ON s.order_id = o.order_id\nWHERE o.status <> s.status;`,
           hints: ['Join the two tables on order_id.', 'Compare the two status columns in WHERE.', 'WHERE o.status <> s.status'],
           explain: 'O1004 only. An INNER JOIN is right here because a status can only differ where both rows exist; the missing rows are a separate check.' },
+        { t: 'compare', h: 'Test the fix before you call it fixed',
+          intro: 'Proposed fix for the dropped line: trim the product code in the sync join. Order totals for every order, before and after.',
+          a: { label: 'Current join', sql: `SELECT l.order_id,\n       SUM(l.qty_ordered) AS total_qty\nFROM order_lines l\nJOIN products p\n  ON l.product_id = p.product_id\nGROUP BY l.order_id\nORDER BY l.order_id;` },
+          b: { label: 'With the fix', sql: `SELECT l.order_id,\n       SUM(l.qty_ordered) AS total_qty\nFROM order_lines l\nJOIN products p\n  ON TRIM(l.product_id) = p.product_id\nGROUP BY l.order_id\nORDER BY l.order_id;` },
+          diff: 'Exactly one row changes: O1005 goes from 25 to 105, which matches the source. Every other order is untouched, so the fix does what was intended and nothing else.',
+          use: ['Write down the expected result before running the test', 'Test the failing case: does it now give the right answer?', 'Test the cases that were already right: did any of them change? (regression check)', 'Record what you ran and what came back, so someone else can repeat it', 'O1004 still shows 50, not 60: the unknown product P99 is a separate issue and stays on the list'] },
         { t: 'text', h: 'How to report a finding', key: "Evidence, cause, impact, next action.", html: `
 <p>Use the same four parts every time: <strong>evidence, cause, impact, next action.</strong></p>
 <p class="say">"I compared order totals in the source with what the screen shows. Five of six screen rows match. O1005 shows 25 against 105 in the source. I can reproduce 25 by inner-joining lines to products, and one line has a leading space in its product code, so it fails the match. That affects one order and 80 units today, and any line keyed the same way in future. I would correct that code at the source, re-run the sync for the order, and ask whether the load can trim codes on the way in."</p>
@@ -987,6 +1008,86 @@ LEFT JOIN products p ON p.product_id = l.product_id;</pre>` },
         { t: 'quiz', q: 'The source total and the screen total for an order are identical, and the store insists the quantity is double what they ordered. Where do you look first?',
           options: ['The sync job, because the screen is wrong', 'Duplicate rows in the source lines, because both copies agree', 'The ORDER BY clause'], correct: 1,
           why: 'If the copy matches the source, the sync did its job. The error is in the source itself; run GROUP BY … HAVING COUNT(*) > 1 on the line key.' }
+      ]
+    },
+    /* ------------------------------------------------------------------ KPI */
+    {
+      id: 'kpi', title: 'Planning KPIs: forecast accuracy, cover and replenishment', mins: 25, priority: 'Must',
+      builds: 'The role is planning: forecasts go in, replenishment recommendations come out. This chapter turns the SQL you have into the numbers a planner asks for.',
+      outcome: 'Calculate bias, WAPE, days of cover and a reorder list, say what each one means, and hand a clean extract to Excel.',
+      core: [
+        ["Forecast error", "actual − forecast, per row.", "Positive means under-forecast (sold more than planned). Say which way round you calculated it."],
+        ["Bias", "SUM(actual − forecast) ÷ SUM(actual).", "Shows direction. Over- and under-forecasts cancel, so 0% bias is not the same as accurate."],
+        ["WAPE", "SUM(ABS(actual − forecast)) ÷ SUM(actual).", "Shows size of error, weighted by volume. The usual forecast-accuracy KPI (accuracy = 1 − WAPE)."],
+        ["Days of cover", "on_hand ÷ daily_demand.", "How long stock lasts. Compare it with lead time."],
+        ["Inventory position", "on_hand + on_order.", "What replenishment compares with the reorder point, not on_hand alone."],
+        ["Reorder point", "daily_demand × lead_time_days + safety_stock.", "Position below this means an order is due."],
+        ["Fill rate / service level", "shipped ÷ ordered.", "The customer-facing result of all the planning."],
+        ["Planning exception", "A row that breaks a rule and needs a person.", "Finding, explaining and clearing these is the daily job."]
+      ],
+      tip: "Never give a KPI bare. Give its scope with it: which rows, which dates, and what you left out. \"WAPE is 11.5% across 23 rows; one row has no actual yet.\"",
+      steps: [
+        { t: 'text', h: 'What the planning system does, and where you sit', key: "Inputs in, plan out. You check the inputs, watch the outputs and explain the exceptions.", html: `
+<div class="tablewrap"><table><thead><tr><th>Stage</th><th>Examples</th><th>Your check</th><th>Practice table</th></tr></thead><tbody>
+<tr><td><strong>Inputs</strong></td><td>Item and location master data, sales history, promotions, lead times, safety stock</td><td>Complete, unique keys, no orphans, fresh</td><td><code>products</code>, <code>locations</code>, <code>product_feed</code></td></tr>
+<tr><td><strong>Forecast</strong></td><td>Units expected per item, location and day</td><td>Accuracy and bias against actuals; promotions reflected</td><td><code>daily_plan</code></td></tr>
+<tr><td><strong>Replenishment</strong></td><td>What to order and when</td><td>Stock position against reorder point; late or missing receipts</td><td><code>inventory</code>, <code>receipts</code></td></tr>
+<tr><td><strong>Execution</strong></td><td>Orders and shipments</td><td>Fill rate; screen matches source</td><td><code>orders</code>, <code>order_lines</code>, <code>screen_orders</code></td></tr>
+</tbody></table></div>
+<p>When a planner says "the forecast looks wrong" or "why did the system not order?", the answer is nearly always in one of these four places. Chapters 4 to 6 gave you the checks for the first and last rows. This chapter covers the middle two.</p>` },
+        { t: 'compare', h: 'Bias shows direction. WAPE shows size.',
+          intro: 'Forecast error by location, measured two ways on the same rows.',
+          a: { label: 'Bias: errors keep their sign', sql: `SELECT location_id,\n       ROUND(100.0 * SUM(actual_units - forecast_units)\n             / SUM(actual_units), 2) AS error_pct\nFROM daily_plan\nWHERE actual_units IS NOT NULL\nGROUP BY location_id\nORDER BY location_id;` },
+          b: { label: 'WAPE: errors made positive', sql: `SELECT location_id,\n       ROUND(100.0 * SUM(ABS(actual_units - forecast_units))\n             / SUM(actual_units), 2) AS error_pct\nFROM daily_plan\nWHERE actual_units IS NOT NULL\nGROUP BY location_id\nORDER BY location_id;` },
+          diff: 'L02 has 0% bias and 7% WAPE. Its misses were real, and they happened to cancel. L01 is under-forecast (positive bias); L03 is over-forecast (negative).',
+          use: ['"Are we consistently too high or too low?" → bias', '"How wrong are we?" → WAPE', 'Report both; a planner needs direction and size', 'Both exclude the row with no actual, so numerator and denominator cover the same rows'] },
+        { t: 'run', h: 'Split a KPI to find the cause', key: "A total hides where the error is. Group by the thing you suspect.", sql: `SELECT promo,\n       COUNT(*)            AS plan_rows,\n       SUM(forecast_units) AS forecast,\n       SUM(actual_units)   AS actual,\n       ROUND(100.0 * SUM(actual_units - forecast_units)\n             / SUM(actual_units), 1) AS bias_pct\nFROM daily_plan\nWHERE actual_units IS NOT NULL\nGROUP BY promo\nORDER BY promo;`,
+          note: `Non-promotional rows are close to forecast. Promotional rows sold well above it. That is root-cause analysis in one query: the forecast is not wrong everywhere, the <strong>promotional uplift</strong> is too low. Swap <code>promo</code> for <code>plan_date</code>, <code>product_id</code> or <code>location_id</code> to cut the same KPI a different way.` },
+        { t: 'run', h: 'Days of cover against lead time', key: "If stock runs out before the next delivery can arrive, the item is at risk.", sql: `SELECT i.location_id, i.product_id, i.on_hand, i.daily_demand,\n       ROUND(1.0 * i.on_hand / NULLIF(i.daily_demand, 0), 1) AS days_cover,\n       p.lead_time_days,\n       CASE\n         WHEN p.product_id IS NULL THEN 'No master data'\n         WHEN i.daily_demand = 0   THEN 'No demand'\n         WHEN 1.0 * i.on_hand / i.daily_demand < p.lead_time_days THEN 'At risk'\n         ELSE 'OK'\n       END AS status\nFROM inventory i\nLEFT JOIN products p ON p.product_id = i.product_id\nORDER BY i.location_id, i.product_id;`,
+          note: `Every tool from earlier chapters in one query: <code>LEFT JOIN</code> so the unknown product stays visible, <code>NULLIF</code> so zero demand does not cause a divide-by-zero, <code>1.0 *</code> for a decimal result, and <code>CASE</code> with the data-problem tests first.` },
+        { t: 'compare', h: 'Reorder on inventory position, not on-hand',
+          intro: 'Which items are below their reorder point (daily_demand × lead_time_days + safety_stock)?',
+          a: { label: 'On-hand only', sql: `SELECT i.location_id, i.product_id,\n       i.on_hand + i.on_order AS position,\n       i.daily_demand * p.lead_time_days\n         + p.safety_stock AS reorder_point\nFROM inventory i\nJOIN products p ON p.product_id = i.product_id\nWHERE i.on_hand\n      < i.daily_demand * p.lead_time_days + p.safety_stock\nORDER BY i.location_id, i.product_id;` },
+          b: { label: 'On-hand + on-order', sql: `SELECT i.location_id, i.product_id,\n       i.on_hand + i.on_order AS position,\n       i.daily_demand * p.lead_time_days\n         + p.safety_stock AS reorder_point\nFROM inventory i\nJOIN products p ON p.product_id = i.product_id\nWHERE i.on_hand + i.on_order\n      < i.daily_demand * p.lead_time_days + p.safety_stock\nORDER BY i.location_id, i.product_id;` },
+          diff: 'L01 / P01 is flagged on the left only. It has 80 on hand and 50 already on order, which puts it above its reorder point of 120. Ordering again would double up.',
+          use: ['Deciding whether to order → inventory position (on_hand + on_order)', 'Deciding whether you can ship today → on_hand', '"Why did the system not order?" is often answered by stock already on order'] },
+        { t: 'run', h: 'Receipts that are overdue', key: "An order that has not arrived is still counted in on_order. Check it is real.", sql: `SELECT receipt_id, location_id, product_id, expected_date,\n       DATEDIFF(day, expected_date, GETDATE()) AS days_overdue\nFROM receipts\nWHERE received_date IS NULL\nORDER BY days_overdue DESC;`,
+          note: `These two receipts are expected and not received. If the system is relying on them, the items they cover are more exposed than the reorder list suggests. This is a planning exception: it needs a person to chase the supplier.` },
+        { t: 'text', h: 'From SQL to Excel without losing rows', key: "Pull at the grain you will analyse, and carry a control total across.", html: `
+<p>The posting describes the working pattern directly: investigate in SQL, then pull the data into Excel for analysis.</p>
+<ol><li><strong>Decide the grain</strong> of the extract first. Detail rows if you will pivot several ways; pre-summarised if the detail is huge.</li>
+<li><strong>Name every column</strong> and filter the dates in SQL. Do not export <code>SELECT *</code>.</li>
+<li><strong>Record two control numbers</strong> from SQL: the row count and one total (for example 24 rows, forecast 3,560).</li>
+<li><strong>Paste and re-check</strong> in Excel with <code>COUNTA</code> and <code>SUM</code>. If they differ, rows were lost or a number arrived as text.</li>
+<li><strong>Watch the blanks.</strong> SQL NULL arrives as an empty cell, and Excel will treat it as 0 (chapter on SUMIFS).</li>
+<li><strong>Then analyse:</strong> PivotTable, lookups, chart.</li></ol>` },
+        { t: 'try', id: 'kpi-bias', title: 'Bias in units by location',
+          prompt: 'From daily_plan rows that have an actual, return location_id and bias_units (sum of actual_units minus forecast_units) per location. Sort by location_id.',
+          starter: `SELECT location_id,\n       \nFROM daily_plan\n`,
+          solution: `SELECT location_id,\n       SUM(actual_units - forecast_units) AS bias_units\nFROM daily_plan\nWHERE actual_units IS NOT NULL\nGROUP BY location_id\nORDER BY location_id;`, ordered: true,
+          hints: ['SUM(actual_units - forecast_units)', 'WHERE actual_units IS NOT NULL', 'GROUP BY location_id'],
+          explain: 'L01 +200 (under-forecast), L02 exactly 0, L03 −25. The filter matters: without it SUM would still skip the NULL row here, but stating it makes the scope explicit.' },
+        { t: 'try', id: 'kpi-promo', title: 'Promotion against baseline',
+          prompt: 'For location L01 rows that have an actual, return promo, total_forecast and total_actual grouped by promo. Sort by promo.',
+          starter: `SELECT promo,\n       \nFROM daily_plan\n`,
+          solution: `SELECT promo,\n       SUM(forecast_units) AS total_forecast,\n       SUM(actual_units)   AS total_actual\nFROM daily_plan\nWHERE location_id = 'L01'\n  AND actual_units IS NOT NULL\nGROUP BY promo\nORDER BY promo;`, ordered: true,
+          hints: ['Two filters in WHERE, then GROUP BY promo.', "location_id = 'L01' AND actual_units IS NOT NULL"],
+          explain: 'Promo rows: 1,435 forecast against 1,625 actual, a 190-unit shortfall in the plan. Baseline rows are within 10 units.' },
+        { t: 'try', id: 'kpi-cover', title: 'Days of cover',
+          prompt: 'From inventory, return location_id, product_id and days_cover (on_hand ÷ daily_demand, rounded to 2 decimals) for rows where daily_demand is greater than 0. Sort by location_id, then product_id.',
+          starter: `SELECT location_id, product_id,\n       \nFROM inventory\n`,
+          solution: `SELECT location_id, product_id,\n       ROUND(1.0 * on_hand / daily_demand, 2) AS days_cover\nFROM inventory\nWHERE daily_demand > 0\nORDER BY location_id, product_id;`, ordered: true,
+          hints: ['Start the division with 1.0 * so it is not cut to a whole number.', 'WHERE daily_demand > 0 avoids dividing by zero.', 'ROUND(1.0 * on_hand / daily_demand, 2)'],
+          explain: 'L01 / P03 has 0.63 days of cover against a 5-day lead time: the most exposed item in the data.' },
+        { t: 'try', id: 'kpi-reorder', title: 'The reorder list',
+          prompt: 'Join inventory to products. Return location_id, product_id, inventory_position (on_hand + on_order) and reorder_point (daily_demand × lead_time_days + safety_stock) for rows where the position is below the reorder point. Sort by location_id, then product_id.',
+          starter: `SELECT i.location_id, i.product_id,\n       i.on_hand + i.on_order AS inventory_position,\n       \nFROM inventory i\n`,
+          solution: `SELECT i.location_id, i.product_id,\n       i.on_hand + i.on_order AS inventory_position,\n       i.daily_demand * p.lead_time_days + p.safety_stock AS reorder_point\nFROM inventory i\nJOIN products p ON p.product_id = i.product_id\nWHERE i.on_hand + i.on_order < i.daily_demand * p.lead_time_days + p.safety_stock\nORDER BY i.location_id, i.product_id;`, ordered: true,
+          hints: ['JOIN products p ON p.product_id = i.product_id', 'Repeat both expressions in WHERE; SQL Server will not accept the aliases there.', 'WHERE i.on_hand + i.on_order < i.daily_demand * p.lead_time_days + p.safety_stock'],
+          explain: 'Six items. The INNER JOIN leaves out P99, which has stock and no master data; mention it as a separate exception instead of letting it vanish.' },
+        { t: 'quiz', q: 'A location reports 0% forecast bias for the week. What can you conclude?',
+          options: ['The forecast was accurate', 'Over- and under-forecasts added up to zero; accuracy needs WAPE', 'No actuals were loaded'], correct: 1,
+          why: 'Bias nets positive and negative errors against each other. L02 in the practice data has 0% bias and a 7% WAPE.' }
       ]
     },
     /* ------------------------------------------------------------------ 7 */
@@ -1102,6 +1203,18 @@ G2:  =COUNTIF(E:E, E2)       how many times this clean key occurs</pre>
 J1:  =SUM(H2:H25) / SUM(F2:F25)      format as a percentage</pre>
 <p>The helper column leaves the missing-actual row out of the numerator, and <code>SUM</code> already skips blanks in the denominator, so both halves cover the same rows. In one cell: <code>=SUMPRODUCT((F2:F25&lt;&gt;"")*ABS(F2:F25-E2:E25))/SUM(F2:F25)</code>.</p>
 <p>Before reporting any total, check it against a control: <code>=SUM(Plan!E2:E25)</code> should be 3560, and <code>=COUNTA(Plan!A2:A25)</code> should be 24. If a filter or a bad paste lost rows, this is where you find out.</p>` },
+        { t: 'text', h: 'The rest of the advanced Excel toolkit', key: "The posting asks for advanced Excel. These are the features that phrase usually means.", html: `
+<div class="tablewrap"><table><thead><tr><th>Feature</th><th>What it does</th><th>SQL equivalent, or when to use it</th></tr></thead><tbody>
+<tr><td><strong>Table (Ctrl+T)</strong></td><td>Turns a range into a named table that grows with the data. Formulas read <code>Plan[forecast_units]</code>.</td><td>Use it on every extract. Pivots and formulas pick up new rows.</td></tr>
+<tr><td><strong>Remove Duplicates</strong></td><td>Deletes repeated rows on the columns you choose.</td><td>DISTINCT. Count them with COUNTIF first so you know what you removed.</td></tr>
+<tr><td><strong>Text to Columns</strong></td><td>Splits one column on a delimiter, or converts text to numbers or dates.</td><td>Fixes numbers and dates that arrived as text.</td></tr>
+<tr><td><strong>Conditional Formatting</strong></td><td>Colours cells by rule: duplicates, values over a limit, top 10.</td><td>A visual WHERE. Good for exceptions.</td></tr>
+<tr><td><strong>FILTER, UNIQUE, SORT</strong></td><td>Formulas that return a whole filtered, de-duplicated or sorted list.</td><td>WHERE, DISTINCT, ORDER BY as live formulas (Microsoft 365).</td></tr>
+<tr><td><strong>Pivot calculated field</strong></td><td>A formula on pivot totals, such as actual ÷ forecast.</td><td>A calculation on SUMs after GROUP BY.</td></tr>
+<tr><td><strong>Slicer</strong></td><td>Clickable filter buttons for a pivot or table.</td><td>An interactive WHERE for the person reading the report.</td></tr>
+<tr><td><strong>Data Validation</strong></td><td>Restricts what can be typed into a cell, such as a drop-down list.</td><td>Stops dirty keys at the point of entry.</td></tr>
+<tr><td><strong>EOMONTH, WEEKNUM, TEXT</strong></td><td>Month end, week number, and a date shown in a chosen format.</td><td>Group daily rows into weeks or months, like DATEPART.</td></tr>
+</tbody></table></div>` },
         { t: 'try', id: 'xl-sumifs', title: 'SUMIFS with a date', sheets: ['daily_plan'],
           prompt: 'Using SUMIFS on the Plan sheet, what is the total forecast_units for location L01 on November 2, 2026?',
           answerSql: `SELECT SUM(forecast_units) FROM daily_plan WHERE location_id = 'L01' AND plan_date = '2026-11-02'`, answer: 640,
@@ -1171,7 +1284,7 @@ J1:  =SUM(H2:H25) / SUM(F2:F25)      format as a percentage</pre>
   /* -------------------------------------------------------------------- mock */
   mock: {
     minutes: 30,
-    intro: 'Six SQL tasks and two Excel tasks, no hints, in the order an assessment tends to build: filter, total, join, missing data, calculation, investigation, then the spreadsheet. Say your reasoning out loud as you type. Check each answer only after you have committed to it.',
+    intro: 'Seven SQL tasks and two Excel tasks, no hints, in the order an assessment tends to build: filter, total, join, missing data, calculation, investigation, a planning exception, then the spreadsheet. Say your reasoning out loud as you type. Check each answer only after you have committed to it.',
     tasks: [
       { id: 'mock-1', title: 'Filter and sort', prompt: 'Return order_id, customer and status for orders at location L01, newest order_date first, then by order_id.',
         solution: `SELECT order_id, customer, status\nFROM orders\nWHERE location_id = 'L01'\nORDER BY order_date DESC, order_id;`, ordered: true,
@@ -1191,6 +1304,9 @@ J1:  =SUM(H2:H25) / SUM(F2:F25)      format as a percentage</pre>
       { id: 'mock-6', title: 'Investigate a mismatch', prompt: 'The store for O1004 says their order shipped but the screen says Open. Return order_id, source_status, screen_status and synced_at for every order where the screen status differs from the status in orders.',
         solution: `SELECT o.order_id,\n       o.status AS source_status,\n       s.status AS screen_status,\n       s.synced_at\nFROM orders o\nJOIN screen_orders s ON s.order_id = o.order_id\nWHERE o.status <> s.status;`,
         explain: 'The synced_at value is the evidence: the screen row was last refreshed before the order shipped.' },
+      { id: 'mock-9', title: 'Planning exception', prompt: 'A planner asks which items will run out within a day. Return location_id, product_id, on_hand and daily_demand from inventory for rows where on_hand is lower than daily_demand.',
+        solution: `SELECT location_id, product_id, on_hand, daily_demand\nFROM inventory\nWHERE on_hand < daily_demand;`,
+        explain: 'One item: L01 / P03, 50 on hand against 80 a day. Add what you would check next: its lead time (5 days) and whether anything is on order (nothing).' },
       { id: 'mock-7', title: 'Excel: conditional total', sheets: ['daily_plan'], prompt: 'Excel, Plan sheet: what is the total actual_units for product P02 across all locations? Decide the formula before you calculate.',
         answerSql: `SELECT SUM(actual_units) FROM daily_plan WHERE product_id = 'P02'`, answer: 1190,
         solution: `=SUMIFS(Plan!F:F, Plan!D:D, "P02")`, explain: 'One condition, so SUMIF would also do. Say which rows it covers: six rows across L01 and L02.' },
@@ -1465,8 +1581,9 @@ ${l.steps.map((s, n) => stepHtml(l, s, n)).join('')}
   }
   function homeView() {
     const must = L.filter(l => l.priority === 'Must'), mm = must.reduce((n, l) => n + l.mins, 0), n = nextLesson();
-    return `<div class="home"><header class="hero chapter"><p class="eyebrow">HAVI technical interview · ${esc(COURSE.interview)}</p><h1>SQL and Excel for tracing order data</h1><p class="lead">One path. Each lesson opens with a table of its core terms: what each does and why it matters. Then it shows them side by side on real data and has you write them. Queries are written the SQL Server way, and the Excel lessons tie each formula to the SQL it matches.</p><button class="btn big" data-go="${n ? 'l-' + n.id : 'mock'}">${Object.keys(S.done).length ? 'Continue' : 'Start'}: ${esc(n ? n.title : 'Mock interview')} →</button></header>
-<section class="plan"><h2>If time is short</h2><ol><li><strong>Lessons 1 to ${must.length}</strong> in order, about ${Math.floor(mm / 60)}h ${mm % 60}m. Lessons 1 to 6 are SQL; lesson 4 (joins) and lesson 6 (tracing) carry the most weight, so do not skim them. Lessons 7 and 8 are Excel and go quickly once the SQL is in place.</li><li><strong>Mock interview</strong>, ${COURSE.mock.minutes} minutes, talking out loud.</li><li><strong>Cheat sheet</strong> once before you sleep and once before the call.</li><li>Lesson ${L.length} only if all of that is done.</li></ol></section>
+    return `<div class="home"><header class="hero chapter"><p class="eyebrow">HAVI ${esc(COURSE.role)} · technical interview ${esc(COURSE.interview)}</p><h1>SQL and Excel for tracing order data</h1><p class="lead">One path. Each lesson opens with a table of its core terms: what each does and why it matters. Then it shows them side by side on real data and has you write them. Queries are written the SQL Server way, and the Excel lessons tie each formula to the SQL it matches.</p><button class="btn big" data-go="${n ? 'l-' + n.id : 'mock'}">${Object.keys(S.done).length ? 'Continue' : 'Start'}: ${esc(n ? n.title : 'Mock interview')} →</button></header>
+<section class="plan"><h2>What the role asks for, and where it is covered</h2><p class="fine">Taken from the HAVI ${esc(COURSE.role)} posting.</p><div class="tablewrap"><table class="coretable"><thead><tr><th>The posting asks for</th><th>Covered in</th></tr></thead><tbody>${COURSE.roleMap.map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</tbody></table></div></section>
+<section class="plan"><h2>If time is short</h2><ol><li><strong>Chapter 4 (joins)</strong> and <strong>chapter 6 (tracing)</strong>: the two the role leans on most.</li><li><strong>Chapter 7 (planning KPIs)</strong>: the vocabulary the interviewers use every day.</li><li><strong>Chapters 8 and 9 (Excel)</strong>.</li><li>For every other chapter, read its core table on the <button class="link" data-go="cheats">cheat sheet</button> and do one exercise.</li><li><strong>Mock interview</strong>, ${COURSE.mock.minutes} minutes, out loud, in the morning.</li></ol></section>
 <section><h2>Chapters</h2><div class="list">${L.map((l, i) => `<button class="row ${l.excel ? 'xl ' : ''}${pct(l) === 100 ? 'complete' : n && n.id === l.id ? 'current' : ''}" data-go="l-${l.id}"><span class="num">${pct(l) === 100 ? '✓' : i + 1}</span><span class="rowbody"><strong>${esc(l.title)}</strong><span class="fine">${l.mins} min · ${l.excel ? 'Excel · ' : ''}${l.steps.filter(s => s.t === 'compare').length} comparisons · ${l.steps.filter(s => s.t === 'try').length} exercises · ${doneIn(l)}/${items(l).length} done</span></span><span class="tag ${l.priority === 'Must' ? '' : 'soft'}">${l.priority}</span></button>`).join('')}<button class="row ${mockDone() === COURSE.mock.tasks.length ? 'complete' : ''}" data-go="mock"><span class="num">★</span><span class="rowbody"><strong>Mock interview</strong><span class="fine">${COURSE.mock.minutes} min timed · ${COURSE.mock.tasks.length} tasks (SQL and Excel), no hints · ${mockDone()}/${COURSE.mock.tasks.length} done</span></span><span class="tag">Must</span></button></div></section>
 <section class="about"><h2>About the practice data</h2><p>Nine small, made-up tables: an order system (<code>orders</code>, <code>order_lines</code>), the copy a screen reads (<code>screen_orders</code>), master data and planning tables. Errors are planted on purpose so there is something to find. Nothing here is HAVI data.</p><p>The interview database is SQL Server. This page runs a small local database with a SQL Server layer on top, so <code>TOP</code>, <code>ISNULL</code>, <code>LEN</code>, <code>GETDATE</code>, <code>DATEDIFF</code> and <code>DATEADD</code> behave as you will write them tomorrow. If you use syntax SQL Server would reject, the checker tells you.</p><p class="fine">Progress is kept in this browser only.</p><button class="link" data-act="reset">Reset my progress</button></section></div>`;
   }
