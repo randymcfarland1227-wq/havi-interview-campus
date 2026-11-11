@@ -4,7 +4,7 @@ const read = f => fs.readFileSync(f, 'utf8');
 const js = f => read(f).replace(/<\/script/gi, '<\\/script');
 const parts = {
   STYLES: read('src/styles.css'), VENDOR: js('vendor/sql-wasm.js'), WASM: fs.readFileSync('vendor/sql-wasm.wasm').toString('base64'),
-  DATA: js('src/data.js'), COURSE: js('src/course.js'), ENGINE: js('src/engine.js'), APP: js('src/app.js')
+  DATA: js('src/data.js'), COURSE: js('src/course.js'), ENGINE: js('src/engine.js'), REFERENCE: js('src/sql-reference.js'), APP: js('src/app.js')
 };
 const html = read('src/index.html').replace(/\/\*([A-Z]+)\*\//g, (m, k) => parts[k] ?? m);
 // GitHub Pages serves either the repo root or /docs, so write the page to both.
