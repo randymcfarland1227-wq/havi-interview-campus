@@ -271,3 +271,22 @@ code{background:var(--t-text);color:var(--code-ink);font-weight:500}
 .terms summary{cursor:pointer;font-weight:600}
 .terms[open] summary{margin-bottom:10px}
 .exercise-prompt{white-space:pre-line}
+
+/* Section confidence */
+#contents{scroll-margin-top:70px}
+.confidence-picker{margin-inline-start:auto;display:flex;align-items:center;gap:6px;color:var(--ink);font-size:.8rem;letter-spacing:normal;text-transform:none}
+.confidence-picker select{min-height:32px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;cursor:pointer}
+.toc-sections{border-bottom:1px solid var(--line);padding:7px 8px 12px 51px;font-size:.85rem}
+.toc-sections summary{cursor:pointer;color:var(--muted)}
+.section-outline{display:grid;gap:6px;margin:10px 0 0;padding:0;list-style:none}
+.section-outline li{display:flex;align-items:baseline;gap:8px 14px;justify-content:space-between}
+.section-outline .link{min-width:0;text-decoration:none}
+.section-outline .link:hover{text-decoration:underline}
+.confidence-badge{flex:none;border-radius:5px;padding:1px 6px;background:var(--chip);color:var(--muted);font-size:.75rem;font-weight:600}
+.confidence-badge.review{background:var(--warn-bg);color:var(--warn)}
+.confidence-badge.learning{background:var(--accent-soft);color:var(--accent)}
+.confidence-badge.confident{background:var(--good-bg);color:var(--good)}
+@media(max-width:520px){
+  .toc-sections{padding-inline-start:12px}
+  .kind:has(>.confidence-picker){flex-wrap:wrap;gap:5px 8px}
+}

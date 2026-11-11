@@ -282,6 +282,25 @@ code{background:var(--t-text);color:var(--code-ink);font-weight:500}
 .terms[open] summary{margin-bottom:10px}
 .exercise-prompt{white-space:pre-line}
 
+/* Section confidence */
+#contents{scroll-margin-top:70px}
+.confidence-picker{margin-inline-start:auto;display:flex;align-items:center;gap:6px;color:var(--ink);font-size:.8rem;letter-spacing:normal;text-transform:none}
+.confidence-picker select{min-height:32px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;cursor:pointer}
+.toc-sections{border-bottom:1px solid var(--line);padding:7px 8px 12px 51px;font-size:.85rem}
+.toc-sections summary{cursor:pointer;color:var(--muted)}
+.section-outline{display:grid;gap:6px;margin:10px 0 0;padding:0;list-style:none}
+.section-outline li{display:flex;align-items:baseline;gap:8px 14px;justify-content:space-between}
+.section-outline .link{min-width:0;text-decoration:none}
+.section-outline .link:hover{text-decoration:underline}
+.confidence-badge{flex:none;border-radius:5px;padding:1px 6px;background:var(--chip);color:var(--muted);font-size:.75rem;font-weight:600}
+.confidence-badge.review{background:var(--warn-bg);color:var(--warn)}
+.confidence-badge.learning{background:var(--accent-soft);color:var(--accent)}
+.confidence-badge.confident{background:var(--good-bg);color:var(--good)}
+@media(max-width:520px){
+  .toc-sections{padding-inline-start:12px}
+  .kind:has(>.confidence-picker){flex-wrap:wrap;gap:5px 8px}
+}
+
 </style>
 </head>
 <body>
@@ -1885,7 +1904,8 @@ if (typeof module !== 'undefined') module.exports = SQL_REFERENCE;
 <script>(() => {
   'use strict';
   const L = COURSE.lessons, KEY = 'havi-sql-v2';
-  let S = { done: {}, quiz: {}, drafts: {}, hints: {}, shown: {}, mockLeft: COURSE.mock.minutes * 60 };
+  const emptyProgress = () => ({ done: {}, quiz: {}, drafts: {}, hints: {}, shown: {}, confidence: {}, mockLeft: COURSE.mock.minutes * 60 });
+  let S = emptyProgress();
   try { const saved = JSON.parse(localStorage.getItem(KEY)); if (saved && saved.done) S = { ...S, ...saved }; } catch (e) { /* storage unavailable: progress lasts for this visit */ }
   const root = document.documentElement;
   const isDark = () => (root.dataset.theme ? root.dataset.theme === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -2054,10 +2074,44 @@ if (typeof module !== 'undefined') module.exports = SQL_REFERENCE;
   const mockDone = () => COURSE.mock.tasks.filter(t => S.done[t.id]).length;
   const nextLesson = () => L.find(l => pct(l) < 100);
 
+  /* ---------- section confidence ---------- */
+  const confidenceLabels = { '': 'Not rated', review: 'Need review', learning: 'Getting there', confident: 'Confident' };
+  const sectionTitle = step => step.h || step.title || step.q;
+  const sectionKey = (lesson, step) => lesson.id + ':' + (step.id || sectionTitle(step));
+  const confidenceFor = (lesson, step) => {
+    const value = S.confidence[sectionKey(lesson, step)];
+    return Object.hasOwn(confidenceLabels, value) ? value : '';
+  };
+
+  function confidenceSummary(lesson) {
+    const ratings = lesson.steps.map(step => confidenceFor(lesson, step));
+    const rated = ratings.filter(Boolean).length;
+    const needsReview = ratings.filter(value => value === 'review').length;
+    return `${rated}/${ratings.length} rated${needsReview ? ` · ${needsReview} to review` : ''}`;
+  }
+
+  function confidencePicker(lesson, step, index) {
+    const value = confidenceFor(lesson, step);
+    const options = Object.entries(confidenceLabels).map(([key, label]) =>
+      `<option value="${key}"${key === value ? ' selected' : ''}>${label}</option>`).join('');
+    return `<label class="confidence-picker"><span>Confidence</span><select aria-label="Confidence for ${esc(sectionTitle(step))}" data-confidence-lesson="${lesson.id}" data-confidence-step="${index}">${options}</select></label>`;
+  }
+
+  function sectionOutline(lesson, onLesson = false) {
+    return `<ol class="section-outline">${lesson.steps.map((step, index) => {
+      const title = (L.indexOf(lesson) + 1) + '.' + (index + 1) + ' ' + esc(sectionTitle(step));
+      const value = confidenceFor(lesson, step);
+      const link = onLesson
+        ? `<button class="link" data-act="jump" data-v="s${index}">${title}</button>`
+        : `<a class="link" href="#l-${lesson.id}/s${index}">${title}</a>`;
+      return `<li>${link}<span class="confidence-badge ${value}"${onLesson ? ` id="confidence-${index}"` : ''}>${confidenceLabels[value]}</span></li>`;
+    }).join('')}</ol>`;
+  }
+
   /* ---------- steps ---------- */
   const kind = { text: 'Explain', run: 'Example', compare: 'Compare', try: 'Practice', quiz: 'Check', sheet: 'Data' };
   function stepHtml(l, s, i) {
-    const head = `<div class="kind k-${s.t}"><b>${L.indexOf(l) + 1}.${i + 1}</b>${kind[s.t]}</div>`;
+    const head = `<div class="kind k-${s.t}"><b>${L.indexOf(l) + 1}.${i + 1}</b>${kind[s.t]}${confidencePicker(l, s, i)}</div>`;
     if (s.t === 'text') return `<section class="step plain" id="s${i}">${head}<h2>${esc(s.h)}</h2>${keyP(s)}${withReferences(s.html)}</section>`;
     if (s.t === 'sheet') { const t = DATA[s.table]; return `<section class="step" id="s${i}">${head}<h2>${esc(s.h)}</h2><div class="tablewrap sheet"><table><thead><tr><th></th>${t.columns.map((c, n) => `<th>${colName(n)}</th>`).join('')}</tr></thead><tbody><tr><th>1</th>${t.columns.map(c => `<td class="hdr">${esc(c)}</td>`).join('')}</tr>${t.rows.map((r, n) => `<tr><th>${n + 2}</th>${r.map(v => `<td>${v === null ? '' : esc(v).replace(/ /g, '<span class="sp">·</span>')}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="bar"><button class="btn ghost" data-act="copy" data-v="${s.table}">Copy ${esc(s.sheet)} for Excel</button><span class="fine">Paste into cell A1. Dots mark spaces; empty cells are blanks.</span></div></section>`; }
     if (s.t === 'run') return `<section class="step" id="s${i}">${head}<h2>${esc(s.h)}</h2>${keyP(s)}<p class="note">${s.note}</p>${code(s.sql)}${live(s.sql)}<button class="link" data-act="pad" data-sql="${esc(s.sql)}">Change it and re-run</button></section>`;
@@ -2105,8 +2159,8 @@ ${hints && n ? `<div class="hint">${s.hints.slice(0, n).map(h => `<p>${esc(h)}</
   const coreHtml = l => `<section class="core"><details class="terms"><summary>Reference terms</summary>${coreTable(l)}</details><div class="tip"><span>Interview tip</span>${esc(l.tip)}</div><div class="goal"><span>By the end</span>${esc(l.outcome)}</div></section>`;
   function lessonView(l) {
     const i = L.indexOf(l), next = L[i + 1];
-    return `<article class="lesson"><header class="lhead"><div class="chapter ${l.excel ? 'xl' : ''}"><div class="chapnum">${l.track || (l.excel ? 'Excel' : 'SQL')} · Chapter ${i + 1} of ${L.length} · about ${l.mins} min</div><h1>${esc(l.title)}</h1><p>${esc(l.builds)}</p><button class="link" data-go="home">← All chapters</button></div>${l.track === "Kinaxis" ? "" : referenceLegend}${coreHtml(l)}
-<details class="outline"><summary>On this page · ${doneIn(l)} of ${items(l).length} checks done</summary><ol>${l.steps.map((s, n) => `<li><button class="link" data-act="jump" data-v="s${n}"><span class="kind k-${s.t}">${kind[s.t]}</span> ${esc(s.h || s.title || s.q)}</button></li>`).join('')}</ol></details></header>
+    return `<article class="lesson"><header class="lhead"><div class="chapter ${l.excel ? 'xl' : ''}"><div class="chapnum">${l.track || (l.excel ? 'Excel' : 'SQL')} · Chapter ${i + 1} of ${L.length} · about ${l.mins} min</div><h1>${esc(l.title)}</h1><p>${esc(l.builds)}</p><button class="link" data-go="home/contents">← Table of contents</button></div>${l.track === "Kinaxis" ? "" : referenceLegend}${coreHtml(l)}
+<details class="outline"><summary>On this page · ${doneIn(l)} of ${items(l).length} checks done · <span id="confidence-summary">${confidenceSummary(l)}</span></summary>${sectionOutline(l, true)}</details></header>
 ${l.steps.map((s, n) => stepHtml(l, s, n)).join('')}
 <footer class="lfoot">${pct(l) === 100 ? '<div class="msg good">Lesson complete.</div>' : `<p class="fine">${doneIn(l)} of ${items(l).length} checks done on this page. You can move on and come back.</p>`}${next ? `<button class="btn big" data-go="l-${next.id}">Next: ${esc(next.title)} →</button>` : '<button class="btn big" data-go="mock">Go to the mock interview →</button>'}</footer></article>`;
   }
@@ -2115,7 +2169,7 @@ ${l.steps.map((s, n) => stepHtml(l, s, n)).join('')}
     return `<div class="home"><header class="hero chapter"><p class="eyebrow">HAVI ${esc(COURSE.role)} · technical interview ${esc(COURSE.interview)}</p><h1>SQL and Excel for tracing order data</h1><p class="lead">One path. Each lesson opens with a table of its core terms: what each does and why it matters. Then it shows them side by side on real data and has you write them. Queries are written the SQL Server way, and the Excel lessons tie each formula to the SQL it matches.</p><button class="btn big" data-go="${n ? 'l-' + n.id : 'mock'}">${Object.keys(S.done).length ? 'Continue' : 'Start'}: ${esc(n ? n.title : 'Mock interview')} →</button></header>
 <section class="plan"><h2>What the role asks for, and where it is covered</h2><p class="fine">Taken from the HAVI ${esc(COURSE.role)} posting.</p><div class="tablewrap"><table class="coretable"><thead><tr><th>The posting asks for</th><th>Covered in</th></tr></thead><tbody>${COURSE.roleMap.map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</tbody></table></div></section>
 <section class="plan"><h2>If time is short</h2><p>The interviewer described it as basic functions, joining things together, and Excel analysis. So:</p><ol><li><strong>Chapters 1 to 4</strong>: basics, filtering, totals, joins. This is the core of what was described.</li><li><strong>Chapters 8 and 9</strong>: Excel.</li><li><strong>Chapter 11</strong>: ten minutes on Kinaxis.</li><li><strong>Chapters 5, 6 and 7</strong> are what make you stand out: functions, tracing bad data, planning KPIs. Read their core tables on the <button class="link" data-go="cheats">cheat sheet</button> at minimum.</li><li><strong>Mock interview</strong>, ${COURSE.mock.minutes} minutes, out loud, in the morning.</li></ol></section>
-<section><h2>Chapters</h2><div class="list">${L.map((l, i) => `<button class="row ${l.excel ? 'xl ' : ''}${pct(l) === 100 ? 'complete' : n && n.id === l.id ? 'current' : ''}" data-go="l-${l.id}"><span class="num">${pct(l) === 100 ? '✓' : i + 1}</span><span class="rowbody"><strong>${esc(l.title)}</strong><span class="fine">${l.mins} min · ${l.track || (l.excel ? 'Excel' : 'SQL')} · ${l.steps.filter(s => s.t === 'compare').length} comparisons · ${l.steps.filter(s => s.t === 'try').length} exercises · ${doneIn(l)}/${items(l).length} done</span></span><span class="tag ${l.priority === 'Must' ? '' : 'soft'}">${l.priority}</span></button>`).join('')}<button class="row ${mockDone() === COURSE.mock.tasks.length ? 'complete' : ''}" data-go="mock"><span class="num">★</span><span class="rowbody"><strong>Mock interview</strong><span class="fine">${COURSE.mock.minutes} min timed · ${COURSE.mock.tasks.length} tasks (SQL and Excel), no hints · ${mockDone()}/${COURSE.mock.tasks.length} done</span></span><span class="tag">Must</span></button></div></section>
+<section id="contents"><h2>Table of contents</h2><div class="list">${L.map((l, i) => `<button class="row ${l.excel ? 'xl ' : ''}${pct(l) === 100 ? 'complete' : n && n.id === l.id ? 'current' : ''}" data-go="l-${l.id}"><span class="num">${pct(l) === 100 ? '✓' : i + 1}</span><span class="rowbody"><strong>${esc(l.title)}</strong><span class="fine">${l.mins} min · ${l.track || (l.excel ? 'Excel' : 'SQL')} · ${l.steps.filter(s => s.t === 'compare').length} comparisons · ${l.steps.filter(s => s.t === 'try').length} exercises · ${doneIn(l)}/${items(l).length} done</span></span><span class="tag ${l.priority === 'Must' ? '' : 'soft'}">${l.priority}</span></button><details class="toc-sections"><summary>Sections and confidence · ${confidenceSummary(l)}</summary>${sectionOutline(l)}</details>`).join('')}<button class="row ${mockDone() === COURSE.mock.tasks.length ? 'complete' : ''}" data-go="mock"><span class="num">★</span><span class="rowbody"><strong>Mock interview</strong><span class="fine">${COURSE.mock.minutes} min timed · ${COURSE.mock.tasks.length} tasks (SQL and Excel), no hints · ${mockDone()}/${COURSE.mock.tasks.length} done</span></span><span class="tag">Must</span></button></div></section>
 <section class="about"><h2>About the practice data</h2><p>Nine small, made-up tables: an order system (<code>orders</code>, <code>order_lines</code>), the copy a screen reads (<code>screen_orders</code>), master data and planning tables. Errors are planted on purpose so there is something to find. Nothing here is HAVI data.</p><p>The interview database is SQL Server. This page runs a small local database with a SQL Server layer on top, so <code>TOP</code>, <code>ISNULL</code>, <code>LEN</code>, <code>GETDATE</code>, <code>DATEDIFF</code> and <code>DATEADD</code> behave as you will write them tomorrow. If you use syntax SQL Server would reject, the checker tells you.</p><p class="fine">Progress is kept in this browser only.</p><button class="link" data-act="reset">Reset my progress</button></section></div>`;
   }
   const clock = n => `${String(Math.floor(n / 60)).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`;
@@ -2146,10 +2200,15 @@ ${l.steps.map((s, n) => stepHtml(l, s, n)).join('')}
   const route = () => (location.hash || '#home').slice(1);
   function render(keepScroll) {
     hideReference();
-    const y = window.scrollY, r = route(), l = L.find(x => 'l-' + x.id === r);
+    const y = window.scrollY;
+    const [r, section] = route().split('/');
+    const l = L.find(x => 'l-' + x.id === r);
     const total = L.reduce((n, x) => n + items(x).length, 0) + COURSE.mock.tasks.length, done = L.reduce((n, x) => n + doneIn(x), 0) + mockDone();
     app.innerHTML = `<nav class="top"><button class="brand" data-go="home">HAVI SQL prep</button><div class="meter" title="${done} of ${total} checks done"><span style="width:${Math.round(100 * done / total)}%"></span></div><button class="navbtn" data-act="theme" aria-label="Switch between light and dark">${isDark() ? '☀ Light' : '☾ Dark'}</button><button class="navbtn ${r === 'mock' ? 'on' : ''}" data-go="mock">Mock</button><button class="navbtn ${r === 'cheats' ? 'on' : ''}" data-go="cheats">Cheat sheet</button></nav><main id="main">${l ? lessonView(l) : r === 'mock' ? mockView() : r === 'cheats' ? cheatsView() : homeView()}</main><div class="dock"><button class="btn" data-act="drawer" data-v="tables">Tables</button><button class="btn" data-act="drawer" data-v="pad">Scratchpad</button></div><div id="drawer">${drawerHtml()}</div>`;
-    if (keepScroll) window.scrollTo(0, y); else window.scrollTo(0, 0);
+    const target = section && document.getElementById(section);
+    if (keepScroll) window.scrollTo(0, y);
+    else if (target) target.scrollIntoView();
+    else window.scrollTo(0, 0);
   }
   const renderDrawer = () => { document.getElementById('drawer').innerHTML = drawerHtml(); };
   function refreshEx(id) { const el = document.getElementById('ex-' + id), s = findEx(id); if (!el) return; const tmp = document.createElement('div'); tmp.innerHTML = exercise(s, !id.startsWith('mock-')); el.replaceWith(tmp.firstElementChild); }
@@ -2185,7 +2244,21 @@ ${l.steps.map((s, n) => stepHtml(l, s, n)).join('')}
     }
     else if (act === 'timer') { if (ticking) { clearInterval(ticking); ticking = null; } else { if (S.mockLeft <= 0) S.mockLeft = COURSE.mock.minutes * 60; ticking = setInterval(() => { S.mockLeft = Math.max(0, S.mockLeft - 1); const t = document.getElementById('timer'); if (t) t.textContent = clock(S.mockLeft); if (S.mockLeft % 15 === 0) save(); if (!S.mockLeft) { clearInterval(ticking); ticking = null; render(true); } }, 1000); } b.textContent = ticking ? 'Pause' : 'Start'; }
     else if (act === 'timer-reset') { clearInterval(ticking); ticking = null; S.mockLeft = COURSE.mock.minutes * 60; save(); render(true); }
-    else if (act === 'reset') { if (b.dataset.sure) { S = { done: {}, quiz: {}, drafts: {}, hints: {}, shown: {}, mockLeft: COURSE.mock.minutes * 60, theme: S.theme }; for (const k in out) delete out[k]; save(); render(); } else { b.dataset.sure = '1'; b.textContent = 'Tap again to erase all progress'; } }
+    else if (act === 'reset') { if (b.dataset.sure) { S = { ...emptyProgress(), theme: S.theme }; for (const k in out) delete out[k]; save(); render(); } else { b.dataset.sure = '1'; b.textContent = 'Tap again to erase all progress'; } }
+  });
+  document.addEventListener('change', event => {
+    const select = event.target.closest('select[data-confidence-lesson]');
+    if (!select || !Object.hasOwn(confidenceLabels, select.value)) return;
+    const lesson = L.find(item => item.id === select.dataset.confidenceLesson);
+    const index = Number(select.dataset.confidenceStep);
+    const key = sectionKey(lesson, lesson.steps[index]);
+    if (select.value) S.confidence[key] = select.value;
+    else delete S.confidence[key];
+    save();
+    const badge = document.getElementById('confidence-' + index);
+    badge.className = 'confidence-badge ' + select.value;
+    badge.textContent = confidenceLabels[select.value];
+    document.getElementById('confidence-summary').textContent = confidenceSummary(lesson);
   });
   document.addEventListener('input', e => { const d = e.target.dataset && e.target.dataset.draft; if (d) { S.drafts[d] = e.target.value; save(); } else if (e.target.id === 'pad') pad = e.target.value; });
   document.addEventListener('keydown', e => {
@@ -2198,8 +2271,8 @@ ${l.steps.map((s, n) => stepHtml(l, s, n)).join('')}
   window.addEventListener('hashchange', () => render());
 
   /* ---------- start the database ---------- */
-  function start(SQL) { ENGINE.load(SQL, DATA); ready = true; render(true); }
-  function fail(e) { loadError = 'The practice database could not start in this browser (' + e.message + '). The lessons are still readable; reload to try again.'; render(true); }
+  function start(SQL) { ENGINE.load(SQL, DATA); ready = true; render(!route().includes('/')); }
+  function fail(e) { loadError = 'The practice database could not start in this browser (' + e.message + '). The lessons are still readable; reload to try again.'; render(!route().includes('/')); }
   function fallback(first) { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.13.0/sql-asm.js'; s.onload = () => window.initSqlJs().then(start).catch(fail); s.onerror = () => fail(first); document.head.appendChild(s); }
   render();
   try {
