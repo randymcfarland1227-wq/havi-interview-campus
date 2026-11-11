@@ -4,7 +4,7 @@ A single-page SQL and Excel course for a supply chain order-data technical inter
 
 ## Use it
 
-Open `dist/index.html` in a browser, or serve `dist/` from any static host. It is one self-contained file; no server or install is needed.
+Open `index.html` in a browser. With GitHub Pages turned on for `main` (root or `/docs`), it is served at the repo's Pages address. It is one self-contained file; no server or install is needed.
 
 ## Change it
 
@@ -15,7 +15,7 @@ Open `dist/index.html` in a browser, or serve `dist/` from any static host. It i
 
 ```sh
 node verify.cjs   # runs every query in the course
-node build.cjs    # writes dist/index.html
+node build.cjs    # writes index.html and docs/index.html
 ```
 
 All data is fictional. The bundled sql.js licence is in `vendor/sql.js.LICENSE`. Progress is stored in the browser's localStorage.
