@@ -169,6 +169,75 @@ tr.only td:first-child{box-shadow:inset 3px 0 0 var(--mark-line);padding-left:10
 @media (max-width:520px){body{font-size:16px}main{padding:24px 16px 110px}.home,.lesson{gap:34px}.step{padding-top:28px}th,td{padding-right:12px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 
+/* ---- textbook colour system: chapters are banners, each section type has its own colour, key terms are highlighted ---- */
+:root{--chap:#1e3a8a;--chap-xl:#166534;--chap-ink:#ffffff;--hl:#ffe98a;--hl-ink:#1f1f1f;
+  --c-text:#1d4ed8;--c-run:#7c3aed;--c-compare:#c2410c;--c-try:#047857;--c-quiz:#be185d;--c-sheet:#166534;
+  --t-text:#eff4ff;--t-run:#f5f0ff;--t-compare:#fff4ec;--t-try:#ecfdf5;--t-quiz:#fdf0f6;--t-sheet:#effaf1;--zebra:#f7f8fa;--code-ink:#0b3a8f}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--chap:#27407f;--chap-xl:#1f5a35;--hl:#6b5a12;--hl-ink:#fff6cf;
+  --c-text:#8ab4f8;--c-run:#c4a7ff;--c-compare:#ffb38a;--c-try:#6ee7b7;--c-quiz:#f9a8d4;--c-sheet:#86efac;
+  --t-text:#18233b;--t-run:#241c3b;--t-compare:#33211a;--t-try:#12291f;--t-quiz:#331a27;--t-sheet:#15281b;--zebra:#1b1c1e;--code-ink:#cfe0ff}}
+:root[data-theme="dark"]{--chap:#27407f;--chap-xl:#1f5a35;--hl:#6b5a12;--hl-ink:#fff6cf;
+  --c-text:#8ab4f8;--c-run:#c4a7ff;--c-compare:#ffb38a;--c-try:#6ee7b7;--c-quiz:#f9a8d4;--c-sheet:#86efac;
+  --t-text:#18233b;--t-run:#241c3b;--t-compare:#33211a;--t-try:#12291f;--t-quiz:#331a27;--t-sheet:#15281b;--zebra:#1b1c1e;--code-ink:#cfe0ff}
+
+.chapter{display:grid;gap:10px;background:var(--chap);color:var(--chap-ink);border-radius:14px;padding:26px 26px 22px}
+.chapter.xl{background:var(--chap-xl)}
+.chapter h1{color:var(--chap-ink)}
+.chapter p,.chapter .lead{color:var(--chap-ink);opacity:.9;font-size:18px}
+.chapnum,.chapter .eyebrow{font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--hl)}
+.chapter .link{color:var(--chap-ink);opacity:.85;font-size:14px}
+.chapter .btn{background:var(--hl);color:#1f1f1f;margin-top:6px}
+
+.step{--c:var(--c-text);--t:var(--t-text);border-top:0;padding-top:0}
+.step:has(>.k-run){--c:var(--c-run);--t:var(--t-run)}
+.step:has(>.k-compare){--c:var(--c-compare);--t:var(--t-compare)}
+.step:has(>.k-try){--c:var(--c-try);--t:var(--t-try)}
+.step:has(>.k-quiz){--c:var(--c-quiz);--t:var(--t-quiz)}
+.step:has(>.k-sheet){--c:var(--c-sheet);--t:var(--t-sheet)}
+.kind{display:flex;align-items:center;gap:10px;justify-self:stretch;color:var(--c);border-bottom:3px solid var(--c);padding-bottom:8px;font-size:13px}
+.kind b{background:var(--c);color:var(--bg);border-radius:6px;padding:3px 9px;font-size:14px;letter-spacing:0}
+.step>h2,.ex>h2{color:var(--c)}
+.step:has(.ex){border:0;border-left:5px solid var(--c);background:var(--t);border-radius:0 12px 12px 0}
+.step:has(>.k-quiz){background:var(--t);border-left:5px solid var(--c);border-radius:0 12px 12px 0;padding:22px}
+.key{background:var(--t);border-left:5px solid var(--c);border-radius:0 8px 8px 0;padding:12px 16px}
+
+/* key terms */
+.step strong,.core td strong,.plan strong{background:linear-gradient(transparent 55%,var(--hl) 55%);padding:0 2px}
+.verdict strong,.msg strong,.rowbody strong,.sidelabel strong{background:none}
+code{background:var(--t-text);color:var(--code-ink);font-weight:500}
+.code b{font-weight:700}
+
+/* tables */
+.core h2{color:var(--chap)}
+.coretable thead th,.plain .tablewrap thead th{background:var(--chap);color:var(--chap-ink);border-bottom:0;padding-left:14px}
+.coretable td,.plain .tablewrap:not(.sheet) td{padding-left:14px}
+.coretable tbody tr:nth-child(even),.plain .tablewrap:not(.sheet) tbody tr:nth-child(even){background:var(--zebra)}
+.coretable td:first-child{font-size:16px}
+.side .tablewrap th,.step>.tablewrap th{color:var(--c);border-bottom-color:var(--c)}
+.tip{background:#fff7d6;border-left-color:#d19a00;color:#1f1f1f}
+.tip span{color:#8a6100}
+.goal{background:var(--t-try);border-left:4px solid var(--c-try);border-radius:0 8px 8px 0;padding:12px 16px;color:var(--ink)}
+.goal span{color:var(--c-try)}
+
+/* comparisons */
+.side-a{--s:var(--c-text)} .side-b{--s:var(--c-compare)}
+.side{border-top:4px solid var(--s);padding-top:12px}
+.sidelabel{color:var(--s)} .sidelabel span{background:var(--s);color:var(--bg)}
+.verdict{background:var(--t-compare);border-left:5px solid var(--c-compare);border-radius:0 10px 10px 0;padding:14px 18px}
+.verdict .vlabel{color:var(--c-compare)}
+.which .vlabel{color:var(--c-try)}
+.which li::marker{color:var(--c-try)}
+
+/* home */
+.row .num{background:var(--chap);color:var(--chap-ink)}
+.row.xl .num{background:var(--chap-xl)}
+.row.complete .num{background:var(--good-bg);color:var(--good)}
+.row.current{background:var(--t-text)}
+.home h2,.lesson>.lhead>h1{color:var(--chap)}
+.tag{color:var(--c-quiz)} .tag.soft{color:var(--muted)}
+.vs h3{color:var(--c-compare)}
+.lesson .step>h3{color:var(--chap)}
+
 </style>
 </head>
 <body>
@@ -1353,7 +1422,7 @@ if (typeof module !== 'undefined') module.exports = ENGINE;
   /* ---------- steps ---------- */
   const kind = { text: 'Explain', run: 'Example', compare: 'Compare', try: 'Practice', quiz: 'Check', sheet: 'Data' };
   function stepHtml(l, s, i) {
-    const head = `<div class="kind k-${s.t}">${kind[s.t]}</div>`;
+    const head = `<div class="kind k-${s.t}"><b>${L.indexOf(l) + 1}.${i + 1}</b>${kind[s.t]}</div>`;
     if (s.t === 'text') return `<section class="step plain" id="s${i}">${head}<h2>${esc(s.h)}</h2>${keyP(s)}${s.html}</section>`;
     if (s.t === 'sheet') { const t = DATA[s.table]; return `<section class="step" id="s${i}">${head}<h2>${esc(s.h)}</h2><div class="tablewrap sheet"><table><thead><tr><th></th>${t.columns.map((c, n) => `<th>${colName(n)}</th>`).join('')}</tr></thead><tbody><tr><th>1</th>${t.columns.map(c => `<td class="hdr">${esc(c)}</td>`).join('')}</tr>${t.rows.map((r, n) => `<tr><th>${n + 2}</th>${r.map(v => `<td>${v === null ? '' : esc(v).replace(/ /g, '<span class="sp">·</span>')}</td>`).join('')}</tr>`).join('')}</tbody></table></div><div class="bar"><button class="btn ghost" data-act="copy" data-v="${s.table}">Copy ${esc(s.sheet)} for Excel</button><span class="fine">Paste into cell A1. Dots mark spaces; empty cells are blanks.</span></div></section>`; }
     if (s.t === 'run') return `<section class="step" id="s${i}">${head}<h2>${esc(s.h)}</h2>${keyP(s)}${code(s.sql)}${live(s.sql)}<p class="note">${s.note}</p><button class="link" data-act="pad" data-sql="${esc(s.sql)}">Change it and re-run</button></section>`;
@@ -1389,22 +1458,22 @@ ${hints && n ? `<div class="hint">${s.hints.slice(0, n).map(h => `<p>${esc(h)}</
   const coreHtml = l => `<section class="core"><h2>The core ${l.core.length}</h2><p class="fine">Read this table first. The rest of the page shows each of these on real data, then has you use it.</p>${coreTable(l)}<div class="tip"><span>Interview tip</span>${esc(l.tip)}</div><div class="goal"><span>By the end</span>${esc(l.outcome)}</div></section>`;
   function lessonView(l) {
     const i = L.indexOf(l), next = L[i + 1];
-    return `<article class="lesson"><header class="lhead"><div class="crumb"><button class="link" data-go="home">All lessons</button> · Lesson ${i + 1} of ${L.length} · about ${l.mins} min</div><h1>${esc(l.title)}</h1><p class="lead">${esc(l.builds)}</p>${coreHtml(l)}
+    return `<article class="lesson"><header class="lhead"><div class="chapter ${l.excel ? 'xl' : ''}"><div class="chapnum">${l.excel ? 'Excel' : 'SQL'} · Chapter ${i + 1} of ${L.length} · about ${l.mins} min</div><h1>${esc(l.title)}</h1><p>${esc(l.builds)}</p><button class="link" data-go="home">← All chapters</button></div>${coreHtml(l)}
 <details class="outline"><summary>On this page · ${doneIn(l)} of ${items(l).length} checks done</summary><ol>${l.steps.map((s, n) => `<li><button class="link" data-act="jump" data-v="s${n}"><span class="kind k-${s.t}">${kind[s.t]}</span> ${esc(s.h || s.title || s.q)}</button></li>`).join('')}</ol></details></header>
 ${l.steps.map((s, n) => stepHtml(l, s, n)).join('')}
 <footer class="lfoot">${pct(l) === 100 ? '<div class="msg good">Lesson complete.</div>' : `<p class="fine">${doneIn(l)} of ${items(l).length} checks done on this page. You can move on and come back.</p>`}${next ? `<button class="btn big" data-go="l-${next.id}">Next: ${esc(next.title)} →</button>` : '<button class="btn big" data-go="mock">Go to the mock interview →</button>'}</footer></article>`;
   }
   function homeView() {
     const must = L.filter(l => l.priority === 'Must'), mm = must.reduce((n, l) => n + l.mins, 0), n = nextLesson();
-    return `<div class="home"><header class="hero"><p class="eyebrow">HAVI technical interview · ${esc(COURSE.interview)}</p><h1>SQL and Excel for tracing order data</h1><p class="lead">One path. Each lesson opens with a table of its core terms: what each does and why it matters. Then it shows them side by side on real data and has you write them. Queries are written the SQL Server way, and the Excel lessons tie each formula to the SQL it matches.</p><button class="btn big" data-go="${n ? 'l-' + n.id : 'mock'}">${Object.keys(S.done).length ? 'Continue' : 'Start'}: ${esc(n ? n.title : 'Mock interview')} →</button></header>
+    return `<div class="home"><header class="hero chapter"><p class="eyebrow">HAVI technical interview · ${esc(COURSE.interview)}</p><h1>SQL and Excel for tracing order data</h1><p class="lead">One path. Each lesson opens with a table of its core terms: what each does and why it matters. Then it shows them side by side on real data and has you write them. Queries are written the SQL Server way, and the Excel lessons tie each formula to the SQL it matches.</p><button class="btn big" data-go="${n ? 'l-' + n.id : 'mock'}">${Object.keys(S.done).length ? 'Continue' : 'Start'}: ${esc(n ? n.title : 'Mock interview')} →</button></header>
 <section class="plan"><h2>If time is short</h2><ol><li><strong>Lessons 1 to ${must.length}</strong> in order, about ${Math.floor(mm / 60)}h ${mm % 60}m. Lessons 1 to 6 are SQL; lesson 4 (joins) and lesson 6 (tracing) carry the most weight, so do not skim them. Lessons 7 and 8 are Excel and go quickly once the SQL is in place.</li><li><strong>Mock interview</strong>, ${COURSE.mock.minutes} minutes, talking out loud.</li><li><strong>Cheat sheet</strong> once before you sleep and once before the call.</li><li>Lesson ${L.length} only if all of that is done.</li></ol></section>
-<section><h2>Lessons</h2><div class="list">${L.map((l, i) => `<button class="row ${pct(l) === 100 ? 'complete' : n && n.id === l.id ? 'current' : ''}" data-go="l-${l.id}"><span class="num">${pct(l) === 100 ? '✓' : i + 1}</span><span class="rowbody"><strong>${esc(l.title)}</strong><span class="fine">${l.mins} min · ${l.excel ? 'Excel · ' : ''}${l.steps.filter(s => s.t === 'compare').length} comparisons · ${l.steps.filter(s => s.t === 'try').length} exercises · ${doneIn(l)}/${items(l).length} done</span></span><span class="tag ${l.priority === 'Must' ? '' : 'soft'}">${l.priority}</span></button>`).join('')}<button class="row ${mockDone() === COURSE.mock.tasks.length ? 'complete' : ''}" data-go="mock"><span class="num">★</span><span class="rowbody"><strong>Mock interview</strong><span class="fine">${COURSE.mock.minutes} min timed · ${COURSE.mock.tasks.length} tasks (SQL and Excel), no hints · ${mockDone()}/${COURSE.mock.tasks.length} done</span></span><span class="tag">Must</span></button></div></section>
+<section><h2>Chapters</h2><div class="list">${L.map((l, i) => `<button class="row ${l.excel ? 'xl ' : ''}${pct(l) === 100 ? 'complete' : n && n.id === l.id ? 'current' : ''}" data-go="l-${l.id}"><span class="num">${pct(l) === 100 ? '✓' : i + 1}</span><span class="rowbody"><strong>${esc(l.title)}</strong><span class="fine">${l.mins} min · ${l.excel ? 'Excel · ' : ''}${l.steps.filter(s => s.t === 'compare').length} comparisons · ${l.steps.filter(s => s.t === 'try').length} exercises · ${doneIn(l)}/${items(l).length} done</span></span><span class="tag ${l.priority === 'Must' ? '' : 'soft'}">${l.priority}</span></button>`).join('')}<button class="row ${mockDone() === COURSE.mock.tasks.length ? 'complete' : ''}" data-go="mock"><span class="num">★</span><span class="rowbody"><strong>Mock interview</strong><span class="fine">${COURSE.mock.minutes} min timed · ${COURSE.mock.tasks.length} tasks (SQL and Excel), no hints · ${mockDone()}/${COURSE.mock.tasks.length} done</span></span><span class="tag">Must</span></button></div></section>
 <section class="about"><h2>About the practice data</h2><p>Nine small, made-up tables: an order system (<code>orders</code>, <code>order_lines</code>), the copy a screen reads (<code>screen_orders</code>), master data and planning tables. Errors are planted on purpose so there is something to find. Nothing here is HAVI data.</p><p>The interview database is SQL Server. This page runs a small local database with a SQL Server layer on top, so <code>TOP</code>, <code>ISNULL</code>, <code>LEN</code>, <code>GETDATE</code>, <code>DATEDIFF</code> and <code>DATEADD</code> behave as you will write them tomorrow. If you use syntax SQL Server would reject, the checker tells you.</p><p class="fine">Progress is kept in this browser only.</p><button class="link" data-act="reset">Reset my progress</button></section></div>`;
   }
   const clock = n => `${String(Math.floor(n / 60)).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`;
   function mockView() {
     const m = COURSE.mock;
-    return `<article class="lesson"><header class="lhead"><div class="crumb"><button class="link" data-go="home">All lessons</button> · Rehearsal</div><h1>Mock interview</h1><p class="lead">${esc(m.intro)}</p><div class="timerbox"><div class="timer" id="timer">${clock(S.mockLeft)}</div><button class="btn" data-act="timer">${ticking ? 'Pause' : 'Start'}</button><button class="btn ghost" data-act="timer-reset">Reset to ${m.minutes}:00</button></div><h3>Say this as you work</h3><ol class="talk">${m.talk.map(t => `<li>${esc(t)}</li>`).join('')}</ol></header>${m.tasks.map((t, i) => `<section class="step"><div class="kind k-try">Task ${i + 1} of ${m.tasks.length}</div>${exercise(t, false)}</section>`).join('')}<footer class="lfoot"><p>${mockDone()} of ${m.tasks.length} solved. Any task you needed the answer for: clear it and redo it from a blank editor.</p><button class="btn big" data-go="cheats">Review the cheat sheet →</button></footer></article>`;
+    return `<article class="lesson"><header class="lhead"><div class="crumb"><button class="link" data-go="home">All lessons</button> · Rehearsal</div><h1>Mock interview</h1><p class="lead">${esc(m.intro)}</p><div class="timerbox"><div class="timer" id="timer">${clock(S.mockLeft)}</div><button class="btn" data-act="timer">${ticking ? 'Pause' : 'Start'}</button><button class="btn ghost" data-act="timer-reset">Reset to ${m.minutes}:00</button></div><h3>Say this as you work</h3><ol class="talk">${m.talk.map(t => `<li>${esc(t)}</li>`).join('')}</ol></header>${m.tasks.map((t, i) => `<section class="step"><div class="kind k-try"><b>${i + 1}</b>Task ${i + 1} of ${m.tasks.length}</div>${exercise(t, false)}</section>`).join('')}<footer class="lfoot"><p>${mockDone()} of ${m.tasks.length} solved. Any task you needed the answer for: clear it and redo it from a blank editor.</p><button class="btn big" data-go="cheats">Review the cheat sheet →</button></footer></article>`;
   }
   function cheatsView() {
     return `<article class="lesson"><header class="lhead"><div class="crumb"><button class="link" data-go="home">All lessons</button> · Reference</div><h1>Cheat sheet</h1><p class="lead">The SQL patterns, the SQL Server differences, the Excel formulas, and every comparison from the lessons on one page.</p></header>

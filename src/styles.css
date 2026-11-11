@@ -158,3 +158,72 @@ tr.only td:first-child{box-shadow:inset 3px 0 0 var(--mark-line);padding-left:10
 .dbody{padding:16px 20px 28px;overflow:auto;display:grid;gap:14px;align-content:start}
 @media (max-width:520px){body{font-size:16px}main{padding:24px 16px 110px}.home,.lesson{gap:34px}.step{padding-top:28px}th,td{padding-right:12px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+/* ---- textbook colour system: chapters are banners, each section type has its own colour, key terms are highlighted ---- */
+:root{--chap:#1e3a8a;--chap-xl:#166534;--chap-ink:#ffffff;--hl:#ffe98a;--hl-ink:#1f1f1f;
+  --c-text:#1d4ed8;--c-run:#7c3aed;--c-compare:#c2410c;--c-try:#047857;--c-quiz:#be185d;--c-sheet:#166534;
+  --t-text:#eff4ff;--t-run:#f5f0ff;--t-compare:#fff4ec;--t-try:#ecfdf5;--t-quiz:#fdf0f6;--t-sheet:#effaf1;--zebra:#f7f8fa;--code-ink:#0b3a8f}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--chap:#27407f;--chap-xl:#1f5a35;--hl:#6b5a12;--hl-ink:#fff6cf;
+  --c-text:#8ab4f8;--c-run:#c4a7ff;--c-compare:#ffb38a;--c-try:#6ee7b7;--c-quiz:#f9a8d4;--c-sheet:#86efac;
+  --t-text:#18233b;--t-run:#241c3b;--t-compare:#33211a;--t-try:#12291f;--t-quiz:#331a27;--t-sheet:#15281b;--zebra:#1b1c1e;--code-ink:#cfe0ff}}
+:root[data-theme="dark"]{--chap:#27407f;--chap-xl:#1f5a35;--hl:#6b5a12;--hl-ink:#fff6cf;
+  --c-text:#8ab4f8;--c-run:#c4a7ff;--c-compare:#ffb38a;--c-try:#6ee7b7;--c-quiz:#f9a8d4;--c-sheet:#86efac;
+  --t-text:#18233b;--t-run:#241c3b;--t-compare:#33211a;--t-try:#12291f;--t-quiz:#331a27;--t-sheet:#15281b;--zebra:#1b1c1e;--code-ink:#cfe0ff}
+
+.chapter{display:grid;gap:10px;background:var(--chap);color:var(--chap-ink);border-radius:14px;padding:26px 26px 22px}
+.chapter.xl{background:var(--chap-xl)}
+.chapter h1{color:var(--chap-ink)}
+.chapter p,.chapter .lead{color:var(--chap-ink);opacity:.9;font-size:18px}
+.chapnum,.chapter .eyebrow{font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--hl)}
+.chapter .link{color:var(--chap-ink);opacity:.85;font-size:14px}
+.chapter .btn{background:var(--hl);color:#1f1f1f;margin-top:6px}
+
+.step{--c:var(--c-text);--t:var(--t-text);border-top:0;padding-top:0}
+.step:has(>.k-run){--c:var(--c-run);--t:var(--t-run)}
+.step:has(>.k-compare){--c:var(--c-compare);--t:var(--t-compare)}
+.step:has(>.k-try){--c:var(--c-try);--t:var(--t-try)}
+.step:has(>.k-quiz){--c:var(--c-quiz);--t:var(--t-quiz)}
+.step:has(>.k-sheet){--c:var(--c-sheet);--t:var(--t-sheet)}
+.kind{display:flex;align-items:center;gap:10px;justify-self:stretch;color:var(--c);border-bottom:3px solid var(--c);padding-bottom:8px;font-size:13px}
+.kind b{background:var(--c);color:var(--bg);border-radius:6px;padding:3px 9px;font-size:14px;letter-spacing:0}
+.step>h2,.ex>h2{color:var(--c)}
+.step:has(.ex){border:0;border-left:5px solid var(--c);background:var(--t);border-radius:0 12px 12px 0}
+.step:has(>.k-quiz){background:var(--t);border-left:5px solid var(--c);border-radius:0 12px 12px 0;padding:22px}
+.key{background:var(--t);border-left:5px solid var(--c);border-radius:0 8px 8px 0;padding:12px 16px}
+
+/* key terms */
+.step strong,.core td strong,.plan strong{background:linear-gradient(transparent 55%,var(--hl) 55%);padding:0 2px}
+.verdict strong,.msg strong,.rowbody strong,.sidelabel strong{background:none}
+code{background:var(--t-text);color:var(--code-ink);font-weight:500}
+.code b{font-weight:700}
+
+/* tables */
+.core h2{color:var(--chap)}
+.coretable thead th,.plain .tablewrap thead th{background:var(--chap);color:var(--chap-ink);border-bottom:0;padding-left:14px}
+.coretable td,.plain .tablewrap:not(.sheet) td{padding-left:14px}
+.coretable tbody tr:nth-child(even),.plain .tablewrap:not(.sheet) tbody tr:nth-child(even){background:var(--zebra)}
+.coretable td:first-child{font-size:16px}
+.side .tablewrap th,.step>.tablewrap th{color:var(--c);border-bottom-color:var(--c)}
+.tip{background:#fff7d6;border-left-color:#d19a00;color:#1f1f1f}
+.tip span{color:#8a6100}
+.goal{background:var(--t-try);border-left:4px solid var(--c-try);border-radius:0 8px 8px 0;padding:12px 16px;color:var(--ink)}
+.goal span{color:var(--c-try)}
+
+/* comparisons */
+.side-a{--s:var(--c-text)} .side-b{--s:var(--c-compare)}
+.side{border-top:4px solid var(--s);padding-top:12px}
+.sidelabel{color:var(--s)} .sidelabel span{background:var(--s);color:var(--bg)}
+.verdict{background:var(--t-compare);border-left:5px solid var(--c-compare);border-radius:0 10px 10px 0;padding:14px 18px}
+.verdict .vlabel{color:var(--c-compare)}
+.which .vlabel{color:var(--c-try)}
+.which li::marker{color:var(--c-try)}
+
+/* home */
+.row .num{background:var(--chap);color:var(--chap-ink)}
+.row.xl .num{background:var(--chap-xl)}
+.row.complete .num{background:var(--good-bg);color:var(--good)}
+.row.current{background:var(--t-text)}
+.home h2,.lesson>.lhead>h1{color:var(--chap)}
+.tag{color:var(--c-quiz)} .tag.soft{color:var(--muted)}
+.vs h3{color:var(--c-compare)}
+.lesson .step>h3{color:var(--chap)}
