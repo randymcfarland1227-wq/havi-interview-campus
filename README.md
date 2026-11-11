@@ -1,33 +1,21 @@
-# Planning Lab — HAVI Interview Campus
+# HAVI SQL Prep
 
-SQL and Excel interview preparation, with interactive lessons, SQLite exercises, quizzes, and a timed mock interview. Exported from the original ChatGPT Site.
+A single-page SQL course for a supply chain order-data technical interview. Each lesson explains an idea, shows two queries side by side on the same data, then has a graded exercise directly underneath. Queries are written in SQL Server syntax.
 
-## Run locally
+## Use it
 
-No build or package installation is required. With Python 3 installed:
+Open `dist/index.html` in a browser, or serve `dist/` from any static host. It is one self-contained file; no server or install is needed.
 
-```sh
-python3 -m http.server 8000 --directory dist
-```
+## Change it
 
-Open http://localhost:8000. Serve the files over HTTP so the SQL worker and WebAssembly engine can load.
-
-## Verify course examples
-
-With Node.js installed:
+- `src/course.js` — every lesson, comparison, exercise, the mock interview and the cheat sheet
+- `src/data.js` — the practice tables (synthetic)
+- `src/engine.js` — runs queries in SQLite (sql.js) with a SQL Server layer: TOP, ISNULL, LEN, GETDATE, DATEDIFF, DATEADD
+- `src/app.js`, `src/styles.css` — the page
 
 ```sh
-node verify-teaching.cjs
+node verify.cjs   # runs every query in the course
+node build.cjs    # writes dist/index.html
 ```
 
-This checks SQL walkthrough results, reference lab answers, and dataset control totals.
-
-## Files and hosting
-
-- `dist/` contains the complete site and bundled sql.js SQLite engine.
-- `verify-teaching.cjs` checks the course examples.
-- `.openai/hosting.json` records the original ChatGPT Sites deployment configuration.
-
-Any static host can serve `dist/`; no server API or credentials are required. Preserve the bundled sql.js license in `dist/assets/sql.js.LICENSE`.
-
-Progress is stored in browser localStorage. It does not automatically transfer between the ChatGPT Site, localhost, or another hosting address. Fonts load from Google Fonts when available.
+All data is fictional. The bundled sql.js licence is in `vendor/sql.js.LICENSE`. Progress is stored in the browser's localStorage.
