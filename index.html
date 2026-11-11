@@ -1540,7 +1540,7 @@ if (typeof module !== 'undefined') module.exports = COURSE;
    LEFT/RIGHT, CHARINDEX, CAST(x AS DATE). */
 const ENGINE = (() => {
   const TODAY = '2026-11-05 09:00:00';
-  let db = null;
+  let db = null, names = [];
 
   // Apply fn to the parts of the query that are outside single-quoted strings.
   const outsideStrings = (sql, fn) => sql.split(/('(?:''|[^'])*')/).map((part, i) => (i % 2 ? part : fn(part))).join('');
@@ -1607,6 +1607,7 @@ const ENGINE = (() => {
 
   function load(SQL, tables) {
     db = new SQL.Database();
+    names = [...new Set(Object.entries(tables).flatMap(([n, t]) => [n, ...t.columns]))];
     for (const [name, t] of Object.entries(tables)) {
       db.run(`CREATE TABLE ${name} (${t.columns.map((c, i) => `${c} ${t.types[i]}`).join(',')});`);
       const st = db.prepare(`INSERT INTO ${name} VALUES (${t.columns.map(() => '?').join(',')})`);
@@ -1636,7 +1637,23 @@ const ENGINE = (() => {
     } finally { st.free(); }
   }
 
+  function dist(a, b) {
+    const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+    for (let j = 1; j <= b.length; j++) d[0][j] = j;
+    for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    return d[a.length][b.length];
+  }
+  function closest(word) {
+    const w = word.toLowerCase();
+    let best = null, score = 99;
+    for (const n of names) { const x = dist(w, n.toLowerCase()); if (x < score) { score = x; best = n; } }
+    return score <= Math.max(2, Math.floor(w.length / 4)) ? best : null;
+  }
   function friendly(msg) {
+    const bad = (msg.match(/no such (?:column|table): (?:\w+\.)?(\w+)/i) || [])[1];
+    const near = bad && closest(bad);
+    if (near) return `Unknown name "${bad}". Did you mean ${near}? Only the first unknown name is reported, so check the rest of the query for typos too.`;
     if (/no such column/i.test(msg)) return `${msg}. Check the spelling and the table alias. Open Tables to see the column names. (Using a SELECT alias inside WHERE also fails on SQL Server.)`;
     if (/no such table/i.test(msg)) return `${msg}. Open Tables to see the table names.`;
     if (/no such function/i.test(msg)) return `${msg}. That function is not available in this practice database.`;
